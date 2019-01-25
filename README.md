@@ -1,2 +1,2 @@
-# amazon-to-library-genesis-downloader
-Download books from library genesis using amazon links.
+# library-genesis-downloads-manager
+Download books from library genesis.
