@@ -13,7 +13,7 @@ db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
 
 
 def algen(query):
-    """ Just write search query and the program will search and
+    """ Just give search query and the program will search and
     give you the link, details and the cover of the newest version """
     if not query: return
     content = find(query)
@@ -80,6 +80,7 @@ def load_book_info(md5, query):
         'publisher': '',
         'year': None,
         'md5': md5,
+        'telegram_file_id': '',
     }
 
     for child in info_children:
