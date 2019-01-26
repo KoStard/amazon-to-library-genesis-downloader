@@ -19,7 +19,9 @@ def algen(query):
     content = find(query)
     if not content: return
     md5 = get_md5(content, query)
-    if not md5 or db['found_books'].find(md5=md5): return
+    if not md5 or db['found_books'].find_one(md5=md5):
+        print("Already Found")
+        return
     info = load_book_info(md5, query)
     if not info: return
     durl = convert_download_url(info)
@@ -63,7 +65,7 @@ def load_book_info(md5, query):
         print("Not OK in the load_book_info")
         add_invalid_query({"query": query, "found_url": url})
         return
-    page_bs = BeautifulSoup(page.content)
+    page_bs = BeautifulSoup(page.content, 'html.parser')
     info = page_bs.find(id='info')
     info_children = info.find_all(recursive=False)
 
@@ -134,9 +136,9 @@ def convert_download_url(info):
     ext = ext[-1]
     filename_base = create_filename_base(info)
     filename = filename_base + '.' + ext
-    if db['found_books'].find(filename='{}.{}'.format(filename_base, ext)):
+    if db['found_books'].find_one(filename='{}.{}'.format(filename_base, ext)):
         index = 2
-        while db['found_books'].find(
+        while db['found_books'].find_one(
                 filename='{} ({}).{}'.format(filename_base, index, ext)):
             index += 1
         filename = '{} ({}).{}'.format(filename_base, index, ext)
@@ -160,7 +162,7 @@ def download_cover_image(info):
 
 def save_book_info(info):
     found_books = db['found_books']
-    if found_books.find(md5=info['md5']):
+    if found_books.find_one(md5=info['md5']):
         pass
     info['authors'] = '|'.join(info['authors'])
     found_books.insert(info)
@@ -168,7 +170,7 @@ def save_book_info(info):
 
 def add_invalid_query(data):
     """ {query} or {query, found_url} """
-    if not db['invalid_queries'].find(query=data['query']):
+    if not db['invalid_queries'].find_one(query=data['query']):
         db['invalid_queries'].insert(data)
 
 
