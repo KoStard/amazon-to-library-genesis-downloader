@@ -11,13 +11,16 @@ def get_response(*args, **kwargs):
 
 
 class Bot:
-    def __init__(self, token, offset, offset_handler=None):
+    def __init__(self, token, offset_handler=None):
         self.token = token
-        self.offset = offset
         self.offset_handler = offset_handler
         self.first_name = ''
         self.last_name = ''
         self.username = ''
+
+    @property
+    def offset(self):
+        return self.offset_handler()
 
     @property
     def name(self):
@@ -31,8 +34,8 @@ class Bot:
         url = self.base_url + "getUpdates"
         payload = {'offset': self.offset or "", 'timeout': timeout}
         updates = get_response(url, params=payload)
-        self.offset = updates[-1]['update_id'] + 1
-        if self.offset_handler: self.offset_handler(self.offset)
+        # self.offset = updates[-1]['update_id'] + 1
+        # if self.offset_handler: self.offset_handler(self.offset)
         return updates
 
     def update_information(self):
