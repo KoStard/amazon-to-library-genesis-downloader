@@ -90,7 +90,6 @@ def load_book_info(md5, query, db, user_id, user_name):
 
     res = {
         'query': query,
-        'processed': False,
         'filename': '',
         'download_url': '',
         'image_url': '',
@@ -102,6 +101,9 @@ def load_book_info(md5, query, db, user_id, user_name):
         'year': None,
         'md5': md5,
         'telegram_file_id': '',
+        'processed': False,
+        'file_found': False,
+        'published': False,
     }
 
     for child in info_children:
@@ -128,7 +130,7 @@ def load_book_info(md5, query, db, user_id, user_name):
                     marker, content, year_t, *args = text.split(': ')
                     if marker == 'Publisher':
                         res['publisher'] = ', '.join(content.split(', ')[:-1])
-                        res['year'] = int(year_t)
+                        res['year'] = int(re.sub('[^\d]', '', year_t))
         else:
             pass
     return res

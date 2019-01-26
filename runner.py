@@ -28,47 +28,49 @@ while running:
         last_update = update
         message = update['message']
         chat = message['chat']
-        text = message.get('text')
-        if not text:
-            continue
-        if text[0] == '/':
-            print("Got command")
-            continue
-        text = re.sub(r'\s{2,}', ' ', text.strip())
-        if len(text) < 10 or ' ' not in text:
-            print("Invalid query \"{}\"".format(text))
-            bot.send_message(
-                chat['id'],
-                "Invalid query. The query has to be longer than 9 characters and contain both the book name and author name.\nFor more information contact with @KoStard",
-                reply_to_message_id=message['message_id'])
-            continue
-        info = algen(
-            text,
-            db,
-            user_id=message['from']['id'],
-            user_name=' '.join(
-                filter(None, (message['from'].get('first_name')
-                              or message['from'].get('username'),
-                              message['from'].get('last_name')))))
-        if info['done']:
-            info = info['info']
-            print("Added {}".format(info['title']))
-            bot.send_message(
-                chat['id'],
-                "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
-                .format(
-                    ' - '.join(
-                        filter(None,
-                               (info['title'], info['authors'].split('|')[0],
-                                str(info['year'])))),
-                    ' '.join(
-                        filter(None, (message['from'].get('first_name')
-                                      or message['from'].get('username'),
-                                      message['from'].get('last_name'))))),
-                reply_to_message_id=message['message_id'])
-        elif info.get('cause'):
-            bot.send_message(
-                chat['id'],
-                info['cause'],
-                reply_to_message_id=message['message_id'])
+        raw_text = message.get('text')
+        for text in raw_text.split('\n'):
+            if not text:
+                continue
+            if text[0] == '/':
+                print("Got command")
+                continue
+            text = re.sub(r'\s{2,}', ' ', text.strip())
+            if len(text) < 10 or ' ' not in text:
+                print("Invalid query \"{}\"".format(text))
+                bot.send_message(
+                    chat['id'],
+                    "Invalid query. The query has to be longer than 9 characters and contain both the book name and author name.\nFor more information contact with @KoStard",
+                    reply_to_message_id=message['message_id'])
+                continue
+            info = algen(
+                text,
+                db,
+                user_id=message['from']['id'],
+                user_name=' '.join(
+                    filter(None, (message['from'].get('first_name')
+                                  or message['from'].get('username'),
+                                  message['from'].get('last_name')))))
+            if info['done']:
+                info = info['info']
+                print("Added {}".format(info['title']))
+                bot.send_message(
+                    chat['id'],
+                    "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
+                    .format(
+                        ' - '.join(
+                            filter(
+                                None,
+                                (info['title'], info['authors'].split('|')[0],
+                                 str(info['year'])))),
+                        ' '.join(
+                            filter(None, (message['from'].get('first_name')
+                                          or message['from'].get('username'),
+                                          message['from'].get('last_name'))))),
+                    reply_to_message_id=message['message_id'])
+            elif info.get('cause'):
+                bot.send_message(
+                    chat['id'],
+                    info['cause'],
+                    reply_to_message_id=message['message_id'])
     if last_update: offset_setter(last_update['update_id'] + 1)
