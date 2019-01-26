@@ -19,7 +19,7 @@ def algen(query):
     content = find(query)
     if not content: return
     md5 = get_md5(content, query)
-    if not md5: return
+    if not md5 or db['found_books'].find(md5=info['md5']): return
     info = load_book_info(md5, query)
     if not info: return
     durl = convert_download_url(info)
@@ -115,9 +115,9 @@ def load_book_info(md5, query):
 
 def create_filename_base(info):
     """ The max length is 60 """
-    return '_'.join(
-        filter(None, [info['title'], info['authors'][0],
-                      str(info['year'])]))[:60]
+    return ' - '.join(
+        filter(None,
+               (info['title'], info['authors'][0], str(info['year']))))[:60]
 
 
 def convert_download_url(info):
@@ -132,7 +132,14 @@ def convert_download_url(info):
         })
         return
     ext = ext[-1]
-    filename = create_filename_base(info) + '.' + ext
+    filename_base = create_filename_base(info)
+    filename = filename_base + '.' + ext
+    if db['found_books'].find(filename='{}.{}'.format(filename_base, ext)):
+        index = 2
+        while db['found_books'].find(
+                filename='{} ({}).{}'.format(filename_base, index, ext)):
+            index += 1
+        filename = '{} ({}).{}'.format(filename_base, index, ext)
     info['filename'] = filename
     info['download_url'] = base + '/' + filename
     return info['download_url']
@@ -145,7 +152,7 @@ def download_cover_image(info):
         if resp.ok:
             open(
                 'covers/{base}_cover.{ext}'.format(
-                    base=create_filename_base(info),
+                    base='.'.join(info['filename'].split('.')[:-1]),
                     ext=info['image_url'].split('.')[-1]),
                 'wb').write(resp.content)
             info['has_cover'] = True
@@ -161,4 +168,5 @@ def save_book_info(info):
 
 def add_invalid_query(data):
     """ {query} or {query, found_url} """
-    db['invalid_queries'].insert(data)
+    if not db['invalid_queries'].find(query=data['query']):
+        db['invalid_queries'].insert(data)
