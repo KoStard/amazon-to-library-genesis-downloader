@@ -10,5 +10,6 @@ def add_bot(token):
     return db['private_data'].insert({
         'name': name,
         'token': token,
-        'offset': 0
+        'offset': 0,
+        'selected': True,
     })
