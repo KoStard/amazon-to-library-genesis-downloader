@@ -19,7 +19,7 @@ def algen(query):
     content = find(query)
     if not content: return
     md5 = get_md5(content, query)
-    if not md5 or db['found_books'].find(md5=info['md5']): return
+    if not md5 or db['found_books'].find(md5=md5): return
     info = load_book_info(md5, query)
     if not info: return
     durl = convert_download_url(info)
@@ -40,7 +40,7 @@ def find(query):
 
 
 def get_md5(content, query):
-    s = BeautifulSoup(content)
+    s = BeautifulSoup(content, 'html.parser')
     tables = s.find_all('table')
     results_number = int(tables[1].tr.td.font.text.split()[0])
     if results_number:
@@ -170,3 +170,7 @@ def add_invalid_query(data):
     """ {query} or {query, found_url} """
     if not db['invalid_queries'].find(query=data['query']):
         db['invalid_queries'].insert(data)
+
+
+if __name__ == '__main__':
+    algen(input('Write query to find: '))
