@@ -13,20 +13,37 @@ headers = {
 def algen(query, db, user_id=None, user_name=None):
     """ Just give search query and the program will search and
     give you the link, details and the cover of the newest version """
-    if not query: return
+    if not query: return {"done": False}
     content = find(query, db, user_id, user_name)
-    if not content: return
+    if not content: return {"done": False}
     md5 = get_md5(content, query, db, user_id, user_name)
-    if not md5 or db['found_books'].find_one(md5=md5):
+    if not md5:
+        return {
+            "done":
+            False,
+            "cause":
+            "Can't find book {}, it will be supervised by MedStard's team.".
+            format(query)
+        }
+    found_book = db['found_books'].find_one(md5=md5)
+    if found_book:
         print("Already Found")
-        return
+        return {
+            "done":
+            False,
+            "cause":
+            "Book {} was already added - {}".format(
+                found_book.title,
+                'it should already be published' if found_book.processed else
+                'it will be published into the channel soon - @MedStard_Books')
+        }
     info = load_book_info(md5, query, db, user_id, user_name)
-    if not info: return
+    if not info: return {"done": False}
     durl = convert_download_url(info, db, user_id, user_name)
-    if not durl: return
+    if not durl: return {"done": False}
     download_cover_image(info, db, user_id, user_name)
     save_book_info(info, db, user_id, user_name)
-    return info
+    return {"done": True, "info": info}
 
 
 def find(query, db, user_id, user_name):
@@ -46,7 +63,7 @@ def get_md5(content, query, db, user_id, user_name):
     results_number = int(tables[1].tr.td.font.text.split()[0])
     if results_number:
         path = tables[2].findChildren('tr')[1].findChildren(
-            'td')[2].findChildren('a')[1].attrs['href']
+            'td')[2].findChildren('a')[-1].attrs['href']
         md5 = re.search(r'md5=([^&/]+)', path)
         if md5:
             md5 = md5.group(1)
@@ -117,7 +134,7 @@ def load_book_info(md5, query, db, user_id, user_name):
     return res
 
 
-def create_filename_base(info, db, user_id, user_name):
+def create_filename_base(info):
     """ The max length is 60 """
     return ' - '.join(
         filter(None,
