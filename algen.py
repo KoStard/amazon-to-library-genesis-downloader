@@ -94,7 +94,7 @@ def load_book_info(md5, query, db, user_id, user_name):
         'filename': '',
         'download_url': '',
         'image_url': '',
-        'has_cover': False,
+        'cover_image': '',
         'title': '',
         'authors': [],
         'series': '',
@@ -136,9 +136,11 @@ def load_book_info(md5, query, db, user_id, user_name):
 
 def create_filename_base(info):
     """ The max length is 60 """
-    return ' - '.join(
-        filter(None,
-               (info['title'], info['authors'][0], str(info['year']))))[:60]
+    return re.sub(
+        r'[\\/|:*?"<>]', '', ' - '.join(
+            filter(
+                None,
+                (info['title'], info['authors'][0], str(info['year'])))))[:60]
 
 
 def convert_download_url(info, db, user_id, user_name):
@@ -171,12 +173,14 @@ def download_cover_image(info, db, user_id, user_name):
         info['image_url'] = 'http://gen.lib.rus.ec' + info['image_url']
         resp = requests.get(info['image_url'], headers)
         if resp.ok:
-            open(
-                'covers/{base}_cover.{ext}'.format(
-                    base='.'.join(info['filename'].split('.')[:-1]),
-                    ext=info['image_url'].split('.')[-1]),
-                'wb').write(resp.content)
-            info['has_cover'] = True
+            cover_filename = 'covers/{base}_cover.{ext}'.format(
+                base='.'.join(info['filename'].split('.')[:-1]),
+                ext=info['image_url'].split('.')[-1])
+            open(cover_filename, 'wb').write(resp.content)
+            info['cover_image'] = cover_filename
+        else:
+            print("Can't download cover image")
+            print(resp)
 
 
 def save_book_info(info, db, user_id, user_name):
