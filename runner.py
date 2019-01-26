@@ -36,7 +36,7 @@ def create_book_caption(book):
 
 
 def publish(bot, chat_id, book):
-    if book.cover_image and False:
+    if book.cover_image:
         bot.send_image(
             chat_id,
             open(book.cover_image, 'rb'),
@@ -74,6 +74,7 @@ while running:
                 if not text:
                     continue
                 if text[0] == '/':
+                    text = text.split('@')[0]
                     print("Got command {}".format(text))
                     if db['admins'].find_one(
                             telegram_id=message['from']['id']):
