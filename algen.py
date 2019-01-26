@@ -10,36 +10,37 @@ headers = {
 }
 
 
-def algen(query, db):
+def algen(query, db, user_id=None, user_name=None):
     """ Just give search query and the program will search and
     give you the link, details and the cover of the newest version """
     if not query: return
-    content = find(query, db)
+    content = find(query, db, user_id, user_name)
     if not content: return
-    md5 = get_md5(content, query, db)
+    md5 = get_md5(content, query, db, user_id, user_name)
     if not md5 or db['found_books'].find_one(md5=md5):
         print("Already Found")
         return
-    info = load_book_info(md5, query, db)
+    info = load_book_info(md5, query, db, user_id, user_name)
     if not info: return
-    durl = convert_download_url(info, db)
+    durl = convert_download_url(info, db, user_id, user_name)
     if not durl: return
-    download_cover_image(info, db)
-    save_book_info(info, db)
+    download_cover_image(info, db, user_id, user_name)
+    save_book_info(info, db, user_id, user_name)
+    return info
 
 
-def find(query, db):
+def find(query, db, user_id, user_name):
     url = 'http://gen.lib.rus.ec/search.php?&req={query}&phrase=1&view=simple&column=def&sort=year&sortmode=DESC'.format(
         query=query)
     page = requests.get(url, headers)
     if not page.ok:
         print("Can't search")
-        add_invalid_query({"query": query})
+        add_invalid_query({"query": query}, db, user_id, user_name)
         return
     return page.content
 
 
-def get_md5(content, query, db):
+def get_md5(content, query, db, user_id, user_name):
     s = BeautifulSoup(content, 'html.parser')
     tables = s.find_all('table')
     results_number = int(tables[1].tr.td.font.text.split()[0])
@@ -52,16 +53,19 @@ def get_md5(content, query, db):
             return md5
     else:
         print("Can't find book with query {}".format(query))
-        add_invalid_query({"query": query})
+        add_invalid_query({"query": query}, db, user_id, user_name)
         return
 
 
-def load_book_info(md5, query, db):
+def load_book_info(md5, query, db, user_id, user_name):
     url = 'http://lib1.org/_ads/{md5}'.format(md5=md5)
     page = requests.get(url, headers)
     if not page.ok:
         print("Not OK in the load_book_info")
-        add_invalid_query({"query": query, "found_url": url})
+        add_invalid_query({
+            "query": query,
+            "found_url": url
+        }, db, user_id, user_name)
         return
     page_bs = BeautifulSoup(page.content, 'html.parser')
     info = page_bs.find(id='info')
@@ -113,14 +117,14 @@ def load_book_info(md5, query, db):
     return res
 
 
-def create_filename_base(info, db):
+def create_filename_base(info, db, user_id, user_name):
     """ The max length is 60 """
     return ' - '.join(
         filter(None,
                (info['title'], info['authors'][0], str(info['year']))))[:60]
 
 
-def convert_download_url(info, db):
+def convert_download_url(info, db, user_id, user_name):
     base = '/'.join(info['download_url'].split('/')[:-1])
     ext = info['download_url'].split('/')[-1].split('.')
     if len(ext) == 1:
@@ -129,7 +133,7 @@ def convert_download_url(info, db):
         add_invalid_query({
             "query": info['query'],
             "found_url": info['download_url']
-        })
+        }, db, user_id, user_name)
         return
     ext = ext[-1]
     filename_base = create_filename_base(info)
@@ -145,7 +149,7 @@ def convert_download_url(info, db):
     return info['download_url']
 
 
-def download_cover_image(info, db):
+def download_cover_image(info, db, user_id, user_name):
     if info['image_url']:
         info['image_url'] = 'http://gen.lib.rus.ec' + info['image_url']
         resp = requests.get(info['image_url'], headers)
@@ -158,7 +162,9 @@ def download_cover_image(info, db):
             info['has_cover'] = True
 
 
-def save_book_info(info, db):
+def save_book_info(info, db, user_id, user_name):
+    info['user_id'] = user_id
+    info['user_name'] = user_name
     found_books = db['found_books']
     if found_books.find_one(md5=info['md5']):
         pass
@@ -166,8 +172,10 @@ def save_book_info(info, db):
     found_books.insert(info)
 
 
-def add_invalid_query(data, db):
+def add_invalid_query(data, db, user_id, user_name):
     """ {query} or {query, found_url} """
+    data['user_id'] = user_id
+    data['user_name'] = user_name
     if not db['invalid_queries'].find_one(query=data['query']):
         db['invalid_queries'].insert(data)
 
