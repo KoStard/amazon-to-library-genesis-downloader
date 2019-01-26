@@ -5,9 +5,14 @@ MESSAGE_MAX_LENGTH = 4096
 
 
 def get_response(*args, **kwargs):
-    resp = requests.get(*args, **kwargs)
+    if 'files' in kwargs:
+        resp = requests.post(*args, **kwargs)
+    else:
+        resp = requests.get(*args, **kwargs)
     if resp.ok:
         return json.loads(resp.content).get('result')
+    else:
+        print(resp.content)
 
 
 class Bot:
@@ -110,7 +115,7 @@ class Bot:
             url,
             params=payload,
             files=files,
-            headers={"Content-Type": "application/json"})
+        )
         return resp
 
     def send_document(self,
