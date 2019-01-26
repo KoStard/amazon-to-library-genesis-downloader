@@ -8,19 +8,39 @@ db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
 
 bot_data = db['bots'].find_one(selected=True)
 
+tags = [
+    "Anatomy", "Physiology", "Anesthesiology", "Intensive Care", "Cardiology",
+    "Chinese", "Clinical", "Dentistry", "Orthodontics", "Diabetes",
+    "Internal Medicine", "Diseases", "Endocrinology", "ENT", "Epidemiology",
+    "Feng Shui", "Histology", "Homeopathy", "Immunology", "Infectious",
+    "Molecular", "Natural", "Neurology", "Oncology", "Ophthalmology",
+    "Pediatrics", "Pharmacology", "Surgery", "Orthopedics", "Therapy", "Trial",
+    "Yoga", "Anthropology", "Evolution", "Biostatistics", "Biotechnology",
+    "Biophysics", "Biochemistry", "Chemistry", "Ecology", "Genetics",
+    "Microbiology", "Biology", "Virology", "Zoology"
+]
+
 
 def create_book_caption(book):
     return ' - '.join(
         filter(None, [
-            book.title, book.year, ', '.join(book.authors.split('|')[:2]),
+            book.title,
+            str(book.year), ', '.join(book.authors.split('|')[:2]),
             book.series, book.publisher
-        ]))
+        ])) + '\n' + ' '.join([
+            '#' + hashtag.replace(' ', '_') for hashtag in filter(None, [book.series, book.publisher, book.authors.split('|')[0].split(' ')[0]] + [
+                tag for tag in tags
+                if re.search(r'(^|\s)' + tag + r'(\s|$)', book.title)
+            ])
+        ])
 
 
 def publish(bot, chat_id, book):
-    if book.cover_image:
+    if book.cover_image and False:
         bot.send_image(
-            chat_id, open(book.cover_image), caption=create_book_caption(book))
+            chat_id,
+            open(book.cover_image, 'rb'),
+            caption=create_book_caption(book))
         bot.send_document(chat_id, book.telegram_file_id)
     else:
         bot.send_document(
@@ -62,8 +82,12 @@ while running:
                                 message['chat'].get('title')
                                 or message['chat'].get('username'),
                                 message['chat']['id'])
-                        elif text == 'publish':
-                            chat_id = db['targets'].find_one().id
+                            bot.send_message(
+                                message['chat']['id'],
+                                "This target is now registered, now you can publish books here with /publish.",
+                                reply_to_message_id=message['message_id'])
+                        elif text == '/publish':
+                            chat_id = db['targets'].find_one().telegram_id
                             books = db['found_books'].find(
                                 file_found=True, published=False)
                             for book in books:
@@ -136,6 +160,6 @@ while running:
                         "Can't find any book with name {}".format(filename),
                         reply_to_message_id=message['message_id'])
         if last_update: offset_setter(last_update['update_id'] + 1)
-    except:
+    except Exception as e:
         print("Error")
         pass
