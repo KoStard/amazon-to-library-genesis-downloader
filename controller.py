@@ -16,6 +16,10 @@ def add_bot(token):
     })
 
 
+def register_target(title, id):
+    return db['targets'].insert({'title': title, 'telegram_id': id})
+
+
 def add_admin(username, telegram_id):
     return db['admins'].insert({
         'username': username,
@@ -25,10 +29,10 @@ def add_admin(username, telegram_id):
 
 def export_download_links():
     links = [
-        row.download_url for row in db['found_books'].find_all(processed=False)
+        row.download_url for row in db['found_books'].find(processed=False)
     ]
-    open('links.txt', 'w').write('\n'.join(links))
-    for row in db['found_books'].find_all(processed=False):
+    open('links.txt', 'a').write('\n' + '\n'.join(links).replace(' ', '%20'))
+    for row in db['found_books'].find(processed=False):
         row['processed'] = True
         db['found_books'].update(row, ['id'])
 

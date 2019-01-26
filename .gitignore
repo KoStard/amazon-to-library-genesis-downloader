@@ -3,3 +3,5 @@
 covers/
 files/
 *.pyc
+*.txt
+*.db-journal

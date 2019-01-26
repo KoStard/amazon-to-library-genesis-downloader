@@ -113,6 +113,24 @@ class Bot:
             headers={"Content-Type": "application/json"})
         return resp
 
+    def send_document(self,
+                      group: str,
+                      file_id: str or int,
+                      *,
+                      caption=None,
+                      reply_to_message_id=None):
+        file_id = str(file_id)
+        url = self.base_url + 'sendDocument'
+        payload = {
+            'chat_id': group,
+            'caption': caption,
+            'reply_to_message_id': reply_to_message_id,
+            'document': file_id
+        }
+        resp = get_response(
+            url, params=payload, headers={"Content-Type": "application/json"})
+        return resp
+
     def delete_message(self, participant_group: str, message_id: int or str):
         if not (isinstance(participant_group, str)
                 or isinstance(participant_group, int)):
