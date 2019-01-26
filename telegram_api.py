@@ -11,12 +11,17 @@ def get_response(*args, **kwargs):
 
 
 class Bot:
-    def __init__(self, token, offset):
+    def __init__(self, token, offset, offset_handler=None):
         self.token = token
         self.offset = offset
+        self.offset_handler = offset_handler
         self.first_name = ''
         self.last_name = ''
         self.username = ''
+
+    @property
+    def name(self):
+        return self.first_name or self.username or self.last_name
 
     @property
     def base_url(self):
@@ -27,21 +32,22 @@ class Bot:
         payload = {'offset': self.offset or "", 'timeout': timeout}
         updates = get_response(url, params=payload)
         self.offset = updates[-1]['update_id'] + 1
+        if self.offset_handler: self.offset_handler(self.offset)
         return updates
 
     def update_information(self):
         url = self.base_url + 'getMe'
-        resp = requests.get(url)
+        resp = get_response(url)
         if resp:
             self.username = resp.get('username')
             self.first_name = resp.get('first_name')
             self.last_name = resp.get('last_name')
-            self.save()
+        return resp
 
     def get_group_member(self, participant_group, participant):
         url = self.base_url + 'getChatMember'
         payload = {'chat_id': participant_group, 'user_id': participant}
-        return requests.get(url, params=payload)
+        return get_response(url, params=payload)
 
     def send_message(self,
                      group: str or int,
@@ -77,7 +83,7 @@ class Bot:
             }
             if parse_mode:
                 payload['parse_mode'] = parse_mode
-            resp_c = requests.get(url, params=payload)
+            resp_c = get_response(url, params=payload)
             resp.append(resp_c)
         return resp
 
@@ -97,7 +103,7 @@ class Bot:
             'reply_to_message_id': reply_to_message_id,
         }
         files = {'photo': image_file}
-        resp = requests.get(
+        resp = get_response(
             url,
             params=payload,
             files=files,
@@ -110,7 +116,7 @@ class Bot:
             participant_group = participant_group.telegram_id
         url = self.base_url + 'deleteMessage'
         payload = {'chat_id': participant_group, 'message_id': message_id}
-        resp = requests.get(url, params=payload)
+        resp = get_response(url, params=payload)
         return resp
 
     def __str__(self):
