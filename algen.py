@@ -9,28 +9,26 @@ headers = {
     'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'
 }
 
-db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
 
-
-def algen(query):
+def algen(query, db):
     """ Just give search query and the program will search and
     give you the link, details and the cover of the newest version """
     if not query: return
-    content = find(query)
+    content = find(query, db)
     if not content: return
-    md5 = get_md5(content, query)
+    md5 = get_md5(content, query, db)
     if not md5 or db['found_books'].find_one(md5=md5):
         print("Already Found")
         return
-    info = load_book_info(md5, query)
+    info = load_book_info(md5, query, db)
     if not info: return
-    durl = convert_download_url(info)
+    durl = convert_download_url(info, db)
     if not durl: return
-    download_cover_image(info)
-    save_book_info(info)
+    download_cover_image(info, db)
+    save_book_info(info, db)
 
 
-def find(query):
+def find(query, db):
     url = 'http://gen.lib.rus.ec/search.php?&req={query}&phrase=1&view=simple&column=def&sort=year&sortmode=DESC'.format(
         query=query)
     page = requests.get(url, headers)
@@ -41,7 +39,7 @@ def find(query):
     return page.content
 
 
-def get_md5(content, query):
+def get_md5(content, query, db):
     s = BeautifulSoup(content, 'html.parser')
     tables = s.find_all('table')
     results_number = int(tables[1].tr.td.font.text.split()[0])
@@ -58,7 +56,7 @@ def get_md5(content, query):
         return
 
 
-def load_book_info(md5, query):
+def load_book_info(md5, query, db):
     url = 'http://lib1.org/_ads/{md5}'.format(md5=md5)
     page = requests.get(url, headers)
     if not page.ok:
@@ -115,14 +113,14 @@ def load_book_info(md5, query):
     return res
 
 
-def create_filename_base(info):
+def create_filename_base(info, db):
     """ The max length is 60 """
     return ' - '.join(
         filter(None,
                (info['title'], info['authors'][0], str(info['year']))))[:60]
 
 
-def convert_download_url(info):
+def convert_download_url(info, db):
     base = '/'.join(info['download_url'].split('/')[:-1])
     ext = info['download_url'].split('/')[-1].split('.')
     if len(ext) == 1:
@@ -147,7 +145,7 @@ def convert_download_url(info):
     return info['download_url']
 
 
-def download_cover_image(info):
+def download_cover_image(info, db):
     if info['image_url']:
         info['image_url'] = 'http://gen.lib.rus.ec' + info['image_url']
         resp = requests.get(info['image_url'], headers)
@@ -160,7 +158,7 @@ def download_cover_image(info):
             info['has_cover'] = True
 
 
-def save_book_info(info):
+def save_book_info(info, db):
     found_books = db['found_books']
     if found_books.find_one(md5=info['md5']):
         pass
@@ -168,11 +166,12 @@ def save_book_info(info):
     found_books.insert(info)
 
 
-def add_invalid_query(data):
+def add_invalid_query(data, db):
     """ {query} or {query, found_url} """
     if not db['invalid_queries'].find_one(query=data['query']):
         db['invalid_queries'].insert(data)
 
 
 if __name__ == '__main__':
-    algen(input('Write query to find: '))
+    db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
+    algen(input('Write query to find: '), db)
