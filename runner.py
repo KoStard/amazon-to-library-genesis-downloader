@@ -5,12 +5,12 @@ from stuf import stuf
 from algen import algen
 db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
 
-bot_data = db['private_data'].find_one(selected=True)
+bot_data = db['bots'].find_one(selected=True)
 
 
 def offset_setter(new_offset):
     bot_data.offset = new_offset
-    db['private_data'].update(bot_data, ['id'])
+    db['bots'].update(bot_data, ['id'])
 
 
 def offset_handler():
@@ -28,7 +28,7 @@ while running:
         last_update = update
         message = update['message']
         chat = message['chat']
-        raw_text = message.get('text')
+        raw_text = message.get('text') or ''
         for text in raw_text.split('\n'):
             if not text:
                 continue
@@ -72,5 +72,24 @@ while running:
                 bot.send_message(
                     chat['id'],
                     info['cause'],
+                    reply_to_message_id=message['message_id'])
+        if 'document' in message:
+            if not db['admins'].find_one(telegram_id=message['from']['id']):
+                bot.send_message(
+                    chat['id'],
+                    "You can't send documents to the bot, if you want to publish books in the channel too, then contact with @KoStard",
+                    reply_to_message_id=message['message_id'])
+                continue
+            document = message['document']
+            filename = document.get('filename')
+            file_id = document['file_id']
+            book = db['found_books'].find_one(
+                processed=True, telegram_file_id='', filename=filename)
+            if book:
+                book.telegram_file_id = file_id
+                db['found_books'].update(book, ['id'])
+                bot.send_message(
+                    chat['id'],
+                    "The file is bound with {}".format(),
                     reply_to_message_id=message['message_id'])
     if last_update: offset_setter(last_update['update_id'] + 1)

@@ -140,9 +140,8 @@ def create_filename_base(info):
     """ The max length is 60 """
     return re.sub(
         r'[\\/|:*?"<>]', '', ' - '.join(
-            filter(
-                None,
-                (info['title'], info['authors'][0], str(info['year'])))))[:60]
+            filter(None, (info['title'], info['authors'][0], str(
+                info['year']))))).strip()[:60]
 
 
 def convert_download_url(info, db, user_id, user_name):

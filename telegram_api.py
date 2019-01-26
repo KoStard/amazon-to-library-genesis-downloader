@@ -20,7 +20,7 @@ class Bot:
 
     @property
     def offset(self):
-        return self.offset_handler()
+        return 0 if not self.offset_handler else self.offset_handler()
 
     @property
     def name(self):
