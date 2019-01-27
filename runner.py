@@ -28,9 +28,13 @@ def create_book_caption(book):
             str(book.year), ', '.join(book.authors.split('|')[:2]),
             book.series, book.publisher
         ])) + '\n' + ' '.join([
-            '#' + hashtag.replace(' ', '_') for hashtag in filter(None, [book.series, book.publisher, book.authors.split('|')[0].split(' ')[0]] + [
-                tag for tag in tags
-                if re.search(r'(^|\s)' + tag.lower() + r'(\s|$)', book.title.lower())
+            '#' + hashtag.replace(' ', '_')
+            for hashtag in filter(None, [
+                book.series, book.publisher,
+                book.authors.split('|')[0].split(' ')[0]
+            ] + [
+                tag for tag in tags if re.search(
+                    r'(^|\s)' + tag.lower() + r'(\s|$)', book.title.lower())
             ])
         ])
 
@@ -95,7 +99,8 @@ while running:
                                 publish(bot, chat_id, book)
                     continue
                 text = re.sub(r'\s{2,}', ' ', text.strip())
-                if len(text) < 10 or ' ' not in text or re.search(r'[^a-zA-Z0-9$@$!%*?&#^-_. +:]+', text):
+                if len(text) < 10 or ' ' not in text or re.search(
+                        r'[^a-zA-Z0-9$@$!%*?&#^-_. +:]+', text):
                     print("Invalid query \"{}\"".format(text))
                     bot.send_message(
                         chat['id'],
@@ -113,20 +118,42 @@ while running:
                 if info['done']:
                     info = info['info']
                     print("Added {}".format(info['title']))
-                    bot.send_message(
-                        chat['id'],
-                        "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
-                        .format(
-                            ' - '.join(
-                                filter(None, (info['title'],
-                                              info['authors'].split('|')[0],
-                                              str(info['year'])))),
-                            ' '.join(
-                                filter(None,
-                                       (message['from'].get('first_name')
-                                        or message['from'].get('username'),
-                                        message['from'].get('last_name'))))),
-                        reply_to_message_id=message['message_id'])
+                    if info['cover_image']:
+                        bot.send_image(
+                            chat['id'],
+                            open(info['cover_image'], 'rb'),
+                            reply_to_message_id=message['message_id'],
+                            caption=
+                            "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
+                            .format(
+                                ' - '.join(
+                                    filter(None,
+                                           (info['title'],
+                                            info['authors'].split('|')[0],
+                                            str(info['year'])))),
+                                ' '.join(
+                                    filter(
+                                        None,
+                                        (message['from'].get('first_name')
+                                         or message['from'].get('username'),
+                                         message['from'].get('last_name'))))))
+                    else:
+                        bot.send_message(
+                            chat['id'],
+                            "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
+                            .format(
+                                ' - '.join(
+                                    filter(None,
+                                           (info['title'],
+                                            info['authors'].split('|')[0],
+                                            str(info['year'])))),
+                                ' '.join(
+                                    filter(
+                                        None,
+                                        (message['from'].get('first_name')
+                                         or message['from'].get('username'),
+                                         message['from'].get('last_name'))))),
+                            reply_to_message_id=message['message_id'])
                 elif info.get('cause'):
                     bot.send_message(
                         chat['id'],
