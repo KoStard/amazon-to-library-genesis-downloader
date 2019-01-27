@@ -182,7 +182,7 @@ def convert_download_url(info, db, user_id, user_name):
             index += 1
         filename = '{} ({}).{}'.format(filename_base, index, ext)
     info['filename'] = filename
-    info['download_url'] = base + '/' + filename
+    info['download_url'] = base + '/' + filename.replace(' ', '%20')
     return info['download_url']
 
 
