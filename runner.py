@@ -99,12 +99,13 @@ while running:
                                 publish(bot, chat_id, book)
                     continue
                 text = re.sub(r'\s{2,}', ' ', text.strip())
-                if len(text) < 10 or ' ' not in text or re.search(
-                        r'[^a-zA-Z0-9$@$!%*?&#^-_. +:]+', text):
+                if len(text) < 10 or len(
+                        text) > 80 or ' ' not in text or re.search(
+                            r'[^a-zA-Z0-9$@$!%*?&#^-_. +:]+', text):
                     print("Invalid query \"{}\"".format(text))
                     bot.send_message(
                         chat['id'],
-                        "Invalid query. The query has to be longer than 9 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard",
+                        "Invalid query. The query has to be longer than 9 characters, shorter than 80 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard",
                         reply_to_message_id=message['message_id'])
                     continue
                 info = algen(
