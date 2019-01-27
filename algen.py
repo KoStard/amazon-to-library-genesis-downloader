@@ -39,6 +39,7 @@ def algen(query, db, user_id=None, user_name=None):
         }
     info = load_book_info(md5, query, db, user_id, user_name)
     if not info: return {"done": False}
+    load_book_version(info)
     durl = convert_download_url(info, db, user_id, user_name)
     if not durl: return {"done": False}
     download_cover_image(info, db, user_id, user_name)
@@ -95,6 +96,7 @@ def load_book_info(md5, query, db, user_id, user_name):
         'image_url': '',
         'cover_image': '',
         'title': '',
+        'version': '',
         'authors': [],
         'series': '',
         'publisher': '',
@@ -134,6 +136,21 @@ def load_book_info(md5, query, db, user_id, user_name):
         else:
             pass
     return res
+
+
+def load_book_version(info):
+    url = 'http://gen.lib.rus.ec/book/bibtex.php?md5={md5}'.format(
+        md5=info['md5'])
+    page = requests.get(url, headers)
+    if not page.ok:
+        print("Not OK in the load_book_version")
+        return
+    page_bs = BeautifulSoup(page.content, 'html.parser')
+    text = page_bs.find('textarea').text
+    match = re.search('edition\s*=\s*{(.*)}', text)
+    if match:
+        info['version'] = match.group(1)
+        return match.group(1)
 
 
 def create_filename_base(info):
