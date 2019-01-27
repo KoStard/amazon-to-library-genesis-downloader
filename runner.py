@@ -30,7 +30,7 @@ def create_book_caption(book):
         ])) + '\n' + ' '.join([
             '#' + hashtag.replace(' ', '_') for hashtag in filter(None, [book.series, book.publisher, book.authors.split('|')[0].split(' ')[0]] + [
                 tag for tag in tags
-                if re.search(r'(^|\s)' + tag + r'(\s|$)', book.title)
+                if re.search(r'(^|\s)' + tag.lower() + r'(\s|$)', book.title.lower())
             ])
         ])
 
@@ -57,7 +57,7 @@ def offset_handler():
 
 
 bot = Bot(token=bot_data.token, offset_handler=offset_handler)
-
+print("Running")
 running = True
 while running:
     try:
@@ -162,5 +162,5 @@ while running:
                         reply_to_message_id=message['message_id'])
         if last_update: offset_setter(last_update['update_id'] + 1)
     except Exception as e:
-        print("Error")
+        print("Error", e)
         pass
