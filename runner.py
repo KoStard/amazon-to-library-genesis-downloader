@@ -4,6 +4,7 @@ import dataset
 from stuf import stuf
 from algen import algen
 import controller
+import logging
 db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
 
 bot_data = db['bots'].find_one(selected=True)
@@ -19,6 +20,21 @@ tags = [
     "Biophysics", "Biochemistry", "Chemistry", "Ecology", "Genetics",
     "Microbiology", "Biology", "Virology", "Zoology"
 ]
+
+
+def configure_logging():
+    """ Encoding will be utf-8 """
+    root_logger = logging.getLogger()
+    """ Preventing multiple calls """
+    if (root_logger.handlers
+            and root_logger.handlers[0].stream.name == "logs.txt"
+            and root_logger.handlers[0].stream.encoding == "utf-8"):
+        return
+    root_logger.setLevel(logging.INFO)
+    handler = logging.FileHandler("logs.txt", "a", "utf-8")
+    root_logger.addHandler(handler)
+
+configure_logging()
 
 
 def create_book_caption(book):
@@ -69,6 +85,7 @@ while running:
         last_update = None
         for update in updates:
             print(update)
+            logging.info(update)
             if last_update: offset_handler(last_update['update_id'] + 1)
             last_update = update
             message = update['message']
@@ -79,7 +96,10 @@ while running:
                     continue
                 if text[0] == '/':
                     text = text.split('@')[0]
-                    print("Got command {}".format(text))
+                    print("Got command {} from {}".format(text, message['from'].get('first_name')
+                                      or message['from'].get('username') or message['from'].get('last_name')))
+                    logging.info("Got command {} from {}".format(text, message['from'].get('first_name')
+                                      or message['from'].get('username') or message['from'].get('last_name')))
                     if db['admins'].find_one(
                             telegram_id=message['from']['id']):
                         if text == '/register':
@@ -97,15 +117,23 @@ while running:
                                 file_found=True, published=False)
                             for book in books:
                                 publish(bot, chat_id, book)
+                        elif text == '/start':
+                            bot.send_message(
+                                message['chat']['id'],
+                                "Just send me full name of the book and first name of the author and I'll find the book for you ;)...\nThe query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.",
+                                reply_to_message_id=message['message_id'])
                     continue
                 text = re.sub(r'\s{2,}', ' ', text.strip())
                 if len(text) < 10 or len(
                         text) > 80 or ' ' not in text or re.search(
                             r'[^a-zA-Z0-9$@$!%*?&#^-_. +:]+', text):
-                    print("Invalid query \"{}\"".format(text))
+                    print("Invalid query \"{}\" from {}".format(text, message['from'].get('first_name')
+                                      or message['from'].get('username') or message['from'].get('last_name')))
+                    logging.info("Invalid query \"{}\" from {}".format(text, message['from'].get('first_name')
+                                      or message['from'].get('username') or message['from'].get('last_name')))
                     bot.send_message(
                         chat['id'],
-                        "Invalid query. The query has to be longer than 9 characters, shorter than 80 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard",
+                        "Invalid query. The query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard",
                         reply_to_message_id=message['message_id'])
                     continue
                 info = algen(
@@ -118,7 +146,8 @@ while running:
                                       message['from'].get('last_name')))))
                 if info['done']:
                     info = info['info']
-                    print("Added {}".format(info['title']))
+                    print("Added {} from {}".format(info['title'], info['user_name']))
+                    logging.info("Added {} from {}".format(info['title'], info['user_name']))
                     if info['cover_image']:
                         bot.send_image(
                             chat['id'],
@@ -191,4 +220,5 @@ while running:
         if last_update: offset_setter(last_update['update_id'] + 1)
     except Exception as e:
         print("Error", e)
+        logging.info("Error", e)
         pass
