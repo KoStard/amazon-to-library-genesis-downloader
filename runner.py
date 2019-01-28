@@ -18,7 +18,7 @@ tags = [
     "Pediatrics", "Pharmacology", "Surgery", "Orthopedics", "Therapy", "Trial",
     "Yoga", "Anthropology", "Evolution", "Biostatistics", "Biotechnology",
     "Biophysics", "Biochemistry", "Chemistry", "Ecology", "Genetics",
-    "Microbiology", "Biology", "Virology", "Zoology"
+    "Microbiology", "Biology", "Virology", "Zoology", "Pathology"
 ]
 
 
@@ -34,25 +34,29 @@ def configure_logging():
     handler = logging.FileHandler("logs.txt", "a", "utf-8")
     root_logger.addHandler(handler)
 
+
 configure_logging()
 
 
 def create_book_caption(book):
-    return ' - '.join(
-        filter(None, [
-            book.title,
-            str(book.year), ', '.join(book.authors.split('|')[:2]),
-            book.series, book.publisher
-        ])) + '\n' + ' '.join([
+    return re.sub(
+        r'([\\/|:*?"\’<>]|[^[:ascii:]])', '', ' - '.join(
+            filter(None, [
+                book.title + (' ' + book.version if book.version else ''),
+                str(book.year), ', '.join(book.authors.split('|')[:2]),
+                book.series, book.publisher
+            ])) + '\n' +
+        ' '.join([
             '#' + hashtag.replace(' ', '_')
             for hashtag in filter(None, [
                 book.series, book.publisher,
                 book.authors.split('|')[0].split(' ')[0]
             ] + [
-                tag for tag in tags if re.search(
+                tag
+                for tag in tags if re.search(
                     r'(^|\s)' + tag.lower() + r'(\s|$)', book.title.lower())
             ])
-        ])
+        ]))
 
 
 def publish(bot, chat_id, book):
@@ -65,6 +69,8 @@ def publish(bot, chat_id, book):
     else:
         bot.send_document(
             chat_id, book.telegram_file_id, caption=create_book_caption(book))
+    book.published = True
+    db['found_books'].update(book, ['id'])
 
 
 def offset_setter(new_offset):
@@ -96,10 +102,14 @@ while running:
                     continue
                 if text[0] == '/':
                     text = text.split('@')[0]
-                    print("Got command {} from {}".format(text, message['from'].get('first_name')
-                                      or message['from'].get('username') or message['from'].get('last_name')))
-                    logging.info("Got command {} from {}".format(text, message['from'].get('first_name')
-                                      or message['from'].get('username') or message['from'].get('last_name')))
+                    print("Got command {} from {}".format(
+                        text, message['from'].get('first_name')
+                        or message['from'].get('username')
+                        or message['from'].get('last_name')))
+                    logging.info("Got command {} from {}".format(
+                        text, message['from'].get('first_name')
+                        or message['from'].get('username')
+                        or message['from'].get('last_name')))
                     if db['admins'].find_one(
                             telegram_id=message['from']['id']):
                         if text == '/register':
@@ -112,7 +122,7 @@ while running:
                                 "This target is now registered, now you can publish books here with /publish.",
                                 reply_to_message_id=message['message_id'])
                         elif text == '/publish':
-                            chat_id = db['targets'].find_one().telegram_id
+                            chat_id = db['targets'].find_one(id=2).telegram_id
                             books = db['found_books'].find(
                                 file_found=True, published=False)
                             for book in books:
@@ -127,10 +137,14 @@ while running:
                 if len(text) < 10 or len(
                         text) > 80 or ' ' not in text or re.search(
                             r'[^a-zA-Z0-9$@$!%*?&#^-_. +:]+', text):
-                    print("Invalid query \"{}\" from {}".format(text, message['from'].get('first_name')
-                                      or message['from'].get('username') or message['from'].get('last_name')))
-                    logging.info("Invalid query \"{}\" from {}".format(text, message['from'].get('first_name')
-                                      or message['from'].get('username') or message['from'].get('last_name')))
+                    print("Invalid query \"{}\" from {}".format(
+                        text, message['from'].get('first_name')
+                        or message['from'].get('username')
+                        or message['from'].get('last_name')))
+                    logging.info("Invalid query \"{}\" from {}".format(
+                        text, message['from'].get('first_name')
+                        or message['from'].get('username')
+                        or message['from'].get('last_name')))
                     bot.send_message(
                         chat['id'],
                         "Invalid query. The query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard",
@@ -146,8 +160,10 @@ while running:
                                       message['from'].get('last_name')))))
                 if info['done']:
                     info = info['info']
-                    print("Added {} from {}".format(info['title'], info['user_name']))
-                    logging.info("Added {} from {}".format(info['title'], info['user_name']))
+                    print("Added {} from {}".format(info['title'],
+                                                    info['user_name']))
+                    logging.info("Added {} from {}".format(
+                        info['title'], info['user_name']))
                     if info['cover_image']:
                         bot.send_image(
                             chat['id'],
@@ -200,9 +216,12 @@ while running:
                 document = message['document']
                 filename = document.get('file_name')
                 file_id = document['file_id']
-                book = db['found_books'].find_one(
-                    processed=True, telegram_file_id='', filename=filename)
+                book = [
+                    b for b in db['found_books'].all() if b.name == filename
+                    or b.name.replace(' ', '_') == filename
+                ]
                 if book:
+                    book = book[0]
                     book.telegram_file_id = file_id
                     book.file_found = True
                     db['found_books'].update(book, ['id'])
