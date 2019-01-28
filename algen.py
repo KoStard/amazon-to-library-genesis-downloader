@@ -156,7 +156,7 @@ def load_book_version(info):
 def create_filename_base(info):
     """ The max length is 70 """
     return re.sub(
-        r'[\\/|:*?"<>]', '', ' - '.join(
+        r'([\\/|:*?"\'’<>]|[^[:ascii:]])', '', ' - '.join(
             filter(None, (info['title'], info['authors'][0], str(
                 info['year']))))).strip()[:70]
 
