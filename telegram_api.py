@@ -16,6 +16,7 @@ def get_response(*args, **kwargs):
 
 
 class Bot:
+
     def __init__(self, token, offset_handler=None):
         self.token = token
         self.offset_handler = offset_handler
@@ -62,7 +63,8 @@ class Bot:
                      text,
                      *,
                      parse_mode='HTML',
-                     reply_to_message_id=None):
+                     reply_to_message_id=None,
+                     silent=False):
         if not (isinstance(group, str) or isinstance(group, int)):
             group = group.telegram_id
 
@@ -82,12 +84,11 @@ class Bot:
         for message in blocks:
             url = self.base_url + 'sendMessage'
             payload = {
-                'chat_id':
-                group,
-                'text':
-                message.replace('<', '&lt;').replace('\\&lt;', '<'),
-                'reply_to_message_id':
-                reply_to_message_id if not resp else resp[-1].get('message_id')
+                'chat_id': group,
+                'text': message.replace('<', '&lt;').replace('\\&lt;', '<'),
+                'reply_to_message_id': reply_to_message_id if not resp else
+                                       resp[-1].get('message_id'),
+                'disable_notification': silent,
             }
             if parse_mode:
                 payload['parse_mode'] = parse_mode
@@ -100,15 +101,17 @@ class Bot:
                    image_file: io.BufferedReader,
                    *,
                    caption='',
-                   reply_to_message_id=None):
-        if not (isinstance(participant_group, str)
-                or isinstance(participant_group, int)):
+                   reply_to_message_id=None,
+                   silent=False):
+        if not (isinstance(participant_group, str) or
+                isinstance(participant_group, int)):
             participant_group = participant_group.telegram_id
         url = self.base_url + 'sendPhoto'
         payload = {
             'chat_id': participant_group,
             'caption': caption,
             'reply_to_message_id': reply_to_message_id,
+            'disable_notification': silent,
         }
         files = {'photo': image_file}
         resp = get_response(
@@ -123,22 +126,24 @@ class Bot:
                       file_id: str or int,
                       *,
                       caption=None,
-                      reply_to_message_id=None):
+                      reply_to_message_id=None,
+                      silent=False):
         file_id = str(file_id)
         url = self.base_url + 'sendDocument'
         payload = {
             'chat_id': group,
             'caption': caption,
             'reply_to_message_id': reply_to_message_id,
-            'document': file_id
+            'document': file_id,
+            'disable_notification': silent,
         }
         resp = get_response(
             url, params=payload, headers={"Content-Type": "application/json"})
         return resp
 
     def delete_message(self, participant_group: str, message_id: int or str):
-        if not (isinstance(participant_group, str)
-                or isinstance(participant_group, int)):
+        if not (isinstance(participant_group, str) or
+                isinstance(participant_group, int)):
             participant_group = participant_group.telegram_id
         url = self.base_url + 'deleteMessage'
         payload = {'chat_id': participant_group, 'message_id': message_id}
@@ -146,8 +151,8 @@ class Bot:
         return resp
 
     def __str__(self):
-        return '[BOT] {}'.format(self.first_name or self.username
-                                 or self.last_name)
+        return '[BOT] {}'.format(self.first_name or self.username or
+                                 self.last_name)
 
     class Meta:
         verbose_name = 'Bot'
