@@ -155,10 +155,10 @@ while running:
                                 "Just send me full name of the book and first name of the author and I'll find the book for you ;)...\nThe query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.",
                                 reply_to_message_id=message['message_id'])
                     continue
+                text = re.sub(r'[^[:ascii:]]+', ' ')
                 text = re.sub(r'\s{2,}', ' ', text.strip())
                 if len(text) < 10 or len(
-                        text) > 80 or ' ' not in text or re.search(
-                            r'[^a-zA-Z0-9$@$!%*?&#^-_. +:]+', text):
+                        text) > 80 or ' ' not in text:
                     print("Invalid query \"{}\" from {}".format(
                         text, message['from'].get('first_name')
                         or message['from'].get('username')
