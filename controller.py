@@ -31,13 +31,8 @@ def export_download_links():
     links = [
         row.download_url for row in db['found_books'].find(processed=False)
     ]
-    open('links.txt', 'a').write('\n' + '\n'.join(links).replace(' ', '%20'))
+    open('links.txt',
+         'a').write('\n' + '\n'.join(links).replace(' ', '%20') + '\n')
     for row in db['found_books'].find(processed=False):
         row['processed'] = True
         db['found_books'].update(row, ['id'])
-
-
-def publish():
-    """ Will post the non-posted books """
-    #- Can't get tags yet - they are in the main page of the book
-    pass
