@@ -63,8 +63,16 @@ def get_md5(content, query, db, user_id, user_name):
     tables = s.find_all('table')
     results_number = int(tables[1].tr.td.font.text.split()[0])
     if results_number:
-        path = tables[2].findChildren('tr')[1].findChildren(
-            'td')[2].findChildren('a')[-1].attrs['href']
+        row_index = 1
+        rows = tables[2].findChildren('tr')
+        while rows[row_index].findChildren('td')[8].text != 'pdf':
+            print("Found another format, will look at next row")
+            row_index += 1
+            if row_index == len(rows):
+                row_index = 1
+                break
+        row = rows[row_index]
+        path = row.findChildren('td')[2].findChildren('a')[-1].attrs['href']
         md5 = re.search(r'md5=([^&/]+)', path)
         if md5:
             md5 = md5.group(1)
@@ -106,6 +114,7 @@ def load_book_info(md5, query, db, user_id, user_name):
         'processed': False,
         'file_found': False,
         'published': False,
+        "publication_day_of_year": None,
     }
 
     for child in info_children:
@@ -157,8 +166,9 @@ def create_filename_base(info):
     """ The max length is 70 """
     return re.sub(
         r'([\\/|:*?"\'’<>]|[^[:ascii:]])', '', ' - '.join(
-            filter(None, (info['title'], info['authors'][0], str(
-                info['year']))))).strip()[:70]
+            filter(None, (info['title'],
+                          (info['authors'][0] if info['authors'] else None),
+                          str(info['year']))))).strip()[:70]
 
 
 def convert_download_url(info, db, user_id, user_name):
@@ -175,12 +185,12 @@ def convert_download_url(info, db, user_id, user_name):
     ext = ext[-1]
     filename_base = create_filename_base(info)
     filename = filename_base + '.' + ext
-    if db['found_books'].find_one(filename='{}.{}'.format(filename_base, ext)):
-        index = 2
-        while db['found_books'].find_one(
-                filename='{} ({}).{}'.format(filename_base, index, ext)):
-            index += 1
-        filename = '{} ({}).{}'.format(filename_base, index, ext)
+    # if db['found_books'].find_one(filename='{}.{}'.format(filename_base, ext)):
+    #     index = 2
+    #     while db['found_books'].find_one(
+    #             filename='{} ({}).{}'.format(filename_base, index, ext)):
+    #         index += 1
+    #     filename = '{} ({}).{}'.format(filename_base, index, ext)
     info['filename'] = filename
     info['download_url'] = base + '/' + filename.replace(' ', '%20')
     return info['download_url']
@@ -217,6 +227,29 @@ def add_invalid_query(data, db, user_id, user_name):
     data['user_name'] = user_name
     if not db['invalid_queries'].find_one(query=data['query']):
         db['invalid_queries'].insert(data)
+
+
+def add_from_md5(md5, db, *, query="", user_id=None, user_name="Admin"):
+    found_book = db['found_books'].find_one(md5=md5)
+    if found_book:
+        print("Already Found")
+        return {
+            "done":
+            False,
+            "cause":
+            "Book {} was already added - {}".format(
+                found_book.title,
+                'it should already be published' if found_book.processed else
+                'it will be published into the channel soon - @MedStard_Books')
+        }
+    info = load_book_info(md5, query, db, user_id, user_name)
+    if not info: return {"done": False}
+    load_book_version(info)
+    durl = convert_download_url(info, db, user_id, user_name)
+    if not durl: return {"done": False}
+    download_cover_image(info, db, user_id, user_name)
+    save_book_info(info, db, user_id, user_name)
+    return {"done": True, "info": info}
 
 
 if __name__ == '__main__':
