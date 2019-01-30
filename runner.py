@@ -40,6 +40,11 @@ def configure_logging():
 configure_logging()
 
 
+def log_to_admpage(text):
+    if db['administrator_page'].count():
+        bot.send_message(db['administrator_page'].find_one().telegram_id, "|=> {}".format(text))
+
+
 def create_book_caption(book):
     return re.sub(
         r'([\\/|:*?"\’<>]|[^[:ascii:]])', '', ' - '.join(
@@ -103,25 +108,23 @@ while running:
             last_update = update
             message = update['message']
             chat = message['chat']
+            from_name = message['from'].get('first_name') or message[
+                'from'].get('username') or message['from'].get('last_name')
             raw_text = message.get('text') or ''
             for text in raw_text.split('\n'):
                 if not text:
                     continue
                 if text == 'Operative Thoracic Surgery':
                     continue
+                log_to_admpage('{} => {}'.format(from_name, text))
                 sleep(1)
                 print("Processing ", text)
                 if text[0] == '/':
                     text = text.split('@')[0]
-                    print("Got command {} from {}".format(
-                        text, message['from'].get('first_name') or
-                        message['from'].get('username') or
-                        message['from'].get('last_name')))
+                    print("Got command {} from {}".format(text, from_name))
                     logging.info("Got command {} from {}".format(
-                        text, message['from'].get('first_name') or
-                        message['from'].get('username') or
-                        message['from'].get('last_name')))
-                    if db['super_admins'].find_one(telegram_id=message['from']
+                        text, from_name))
+                    if db['super_admin'].find_one(telegram_id=message['from']
                                                    ['id']) or text == '/start':
                         if text == '/register':
                             controller.register_target(
@@ -131,6 +134,12 @@ while running:
                             bot.send_message(
                                 message['chat']['id'],
                                 "This target is now registered, now you can publish books here with /publish.",
+                                reply_to_message_id=message['message_id'])
+                        if text == '/register_administrator_page':
+                            controller.register_administrator_page(message['chat']['title'], message['chat']['id'])
+                            bot.send_message(
+                                message['chat']['id'],
+                                "This target is now registered as an administrator page, now you'll get logs here.",
                                 reply_to_message_id=message['message_id'])
                         elif text == '/publish':
                             chat_id = db['targets'].find_one(id=2).telegram_id
@@ -220,6 +229,7 @@ while running:
                         filter(None, (message['from'].get('first_name') or
                                       message['from'].get('username'),
                                       message['from'].get('last_name')))))
+                    log_to_admpage("Problem with getting data of the book.")
                     bot.send_message(
                         chat['id'],
                         "The bot can't search that query, it will be supervised by MedStard's team.\nFor more contact with @KoStard",
@@ -231,6 +241,8 @@ while running:
                     print("Added {} from {}".format(info['title'],
                                                     info['user_name']))
                     logging.info("Added {} from {}".format(
+                        info['title'], info['user_name']))
+                    log_to_admpage("Added {} from {}".format(
                         info['title'], info['user_name']))
                     if info['cover_image']:
                         bot.send_image(
@@ -273,6 +285,7 @@ while running:
                         chat['id'],
                         info['cause'],
                         reply_to_message_id=message['message_id'])
+                    log_to_admpage(info['cause'])
             if 'document' in message:
                 if not db['admins'].find_one(telegram_id=message['from']['id']):
                     bot.send_message(
