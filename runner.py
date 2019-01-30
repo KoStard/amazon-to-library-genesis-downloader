@@ -2,9 +2,11 @@ import re
 from telegram_api import Bot
 import dataset
 from stuf import stuf
-from algen import algen
+from algen import algen, add_invalid_query, add_from_md5
 import controller
 import logging
+from time import sleep
+from datetime import datetime
 db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
 
 bot_data = db['bots'].find_one(selected=True)
@@ -47,7 +49,7 @@ def create_book_caption(book):
                 book.series, book.publisher
             ])) + '\n' +
         ' '.join([
-            '#' + hashtag.replace(' ', '_')
+            '#' + hashtag.replace(' ', '_').replace('-', '').replace('.', '')
             for hashtag in filter(None, [
                 book.series, book.publisher,
                 book.authors.split('|')[0].split(' ')[0]
@@ -70,6 +72,7 @@ def publish(bot, chat_id, book):
         bot.send_document(
             chat_id, book.telegram_file_id, caption=create_book_caption(book))
     book.published = True
+    book.publication_day_of_year = datetime.now().timetuple().tm_yday
     db['found_books'].update(book, ['id'])
 
 
@@ -86,13 +89,14 @@ bot = Bot(token=bot_data.token, offset_handler=offset_handler)
 print("Running")
 running = True
 while running:
-    try:
+    if True:
+        # try:
         updates = bot.update()
         last_update = None
         for update in updates:
             print(update)
             logging.info(update)
-            if last_update: offset_handler(last_update['update_id'] + 1)
+            if last_update: offset_setter(last_update['update_id'] + 1)
             last_update = update
             message = update['message']
             chat = message['chat']
@@ -100,6 +104,10 @@ while running:
             for text in raw_text.split('\n'):
                 if not text:
                     continue
+                if text == 'Operative Thoracic Surgery':
+                    continue
+                sleep(1)
+                print("Processing ", text)
                 if text[0] == '/':
                     text = text.split('@')[0]
                     print("Got command {} from {}".format(
@@ -110,8 +118,8 @@ while running:
                         text, message['from'].get('first_name')
                         or message['from'].get('username')
                         or message['from'].get('last_name')))
-                    if db['admins'].find_one(
-                            telegram_id=message['from']['id']):
+                    if db['super_admins'].find_one(
+                            telegram_id=message['from']['id']) or text == '/start':
                         if text == '/register':
                             controller.register_target(
                                 message['chat'].get('title')
@@ -127,6 +135,20 @@ while running:
                                 file_found=True, published=False)
                             for book in books:
                                 publish(bot, chat_id, book)
+                        elif text == '/register_admin':
+                            user = message['forward_from']
+                            if user:
+                                db['admins'].insert({
+                                    'username': user.get('username') or user.get('first_name') or user.get('last_name'),
+                                    'telegram_id': user['id']
+                                })
+                                bot.send_message(
+                                    message['chat']['id'],
+                                    "User {} is now registered as an admin.".
+                                    format(
+                                        user.get('username')
+                                        or user.get('first_name')
+                                        or user.get('last_name')), reply_to_message_id=message['message_id'])
                         elif text == '/start':
                             bot.send_message(
                                 message['chat']['id'],
@@ -145,19 +167,48 @@ while running:
                         text, message['from'].get('first_name')
                         or message['from'].get('username')
                         or message['from'].get('last_name')))
+                    print("Will send message")
                     bot.send_message(
                         chat['id'],
                         "Invalid query. The query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard",
                         reply_to_message_id=message['message_id'])
                     continue
-                info = algen(
-                    text,
-                    db,
-                    user_id=message['from']['id'],
-                    user_name=' '.join(
+                print("Before algen", text)
+                try:
+                    if text[0] == '*':
+                        info = add_from_md5(
+                            text[1:],
+                            db,
+                            user_id=message['from']['id'],
+                            user_name=' '.join(
+                                filter(None,
+                                       (message['from'].get('first_name')
+                                        or message['from'].get('username'),
+                                        message['from'].get('last_name')))))
+                    else:
+                        info = algen(
+                            text,
+                            db,
+                            user_id=message['from']['id'],
+                            user_name=' '.join(
+                                filter(None, (message['from'].get('first_name')
+                                            or message['from'].get('username'),
+                                            message['from'].get('last_name')))))
+                except Exception as e:
+                    logging.info(e)
+                    print(e)
+                    add_invalid_query({
+                        "query": text
+                    }, db, message['from']['id'], ' '.join(
                         filter(None, (message['from'].get('first_name')
                                       or message['from'].get('username'),
                                       message['from'].get('last_name')))))
+                    bot.send_message(
+                        chat['id'],
+                        "The bot can't search that query, it will be supervised by MedStard's team.\nFor more contact with @KoStard",
+                        reply_to_message_id=message['message_id'])
+                    continue
+                print("After algen")
                 if info['done']:
                     info = info['info']
                     print("Added {} from {}".format(info['title'],
@@ -192,7 +243,7 @@ while running:
                                     filter(None,
                                            (info['title'],
                                             info['authors'].split('|')[0],
-                                            str(info['year'])))),
+                                            str(info['year'] or '')))),
                                 ' '.join(
                                     filter(
                                         None,
@@ -217,8 +268,10 @@ while running:
                 filename = document.get('file_name')
                 file_id = document['file_id']
                 book = [
-                    b for b in db['found_books'].all() if b.name == filename
-                    or b.name.replace(' ', '_') == filename
+                    b for b in db['found_books'].find(file_found=False)
+                    if b.filename == filename
+                    or '.'.join(filename.split('.')
+                                [:-1]) in b.filename.replace(' - ','').replace(' ', '_')
                 ]
                 if book:
                     book = book[0]
@@ -237,7 +290,7 @@ while running:
                         "Can't find any book with name {}".format(filename),
                         reply_to_message_id=message['message_id'])
         if last_update: offset_setter(last_update['update_id'] + 1)
-    except Exception as e:
-        print("Error", e)
-        logging.info("Error", e)
-        pass
+    # except Exception as e:
+    #     print("Error", e)
+    #     logging.info(e)
+    #     pass
