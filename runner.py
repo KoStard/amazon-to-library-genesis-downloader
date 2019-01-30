@@ -28,9 +28,9 @@ def configure_logging():
     """ Encoding will be utf-8 """
     root_logger = logging.getLogger()
     """ Preventing multiple calls """
-    if (root_logger.handlers
-            and root_logger.handlers[0].stream.name == "logs.txt"
-            and root_logger.handlers[0].stream.encoding == "utf-8"):
+    if (root_logger.handlers and
+            root_logger.handlers[0].stream.name == "logs.txt" and
+            root_logger.handlers[0].stream.encoding == "utf-8"):
         return
     root_logger.setLevel(logging.INFO)
     handler = logging.FileHandler("logs.txt", "a", "utf-8")
@@ -54,8 +54,7 @@ def create_book_caption(book):
                 book.series, book.publisher,
                 book.authors.split('|')[0].split(' ')[0]
             ] + [
-                tag
-                for tag in tags if re.search(
+                tag for tag in tags if re.search(
                     r'(^|\s)' + tag.lower() + r'(\s|$)', book.title.lower())
             ])
         ]))
@@ -66,11 +65,15 @@ def publish(bot, chat_id, book):
         bot.send_image(
             chat_id,
             open(book.cover_image, 'rb'),
-            caption=create_book_caption(book))
-        bot.send_document(chat_id, book.telegram_file_id)
+            caption=create_book_caption(book),
+            silent=True)
+        bot.send_document(chat_id, book.telegram_file_id, silent=True)
     else:
         bot.send_document(
-            chat_id, book.telegram_file_id, caption=create_book_caption(book))
+            chat_id,
+            book.telegram_file_id,
+            caption=create_book_caption(book),
+            silent=True)
     book.published = True
     book.publication_day_of_year = datetime.now().timetuple().tm_yday
     db['found_books'].update(book, ['id'])
@@ -111,19 +114,19 @@ while running:
                 if text[0] == '/':
                     text = text.split('@')[0]
                     print("Got command {} from {}".format(
-                        text, message['from'].get('first_name')
-                        or message['from'].get('username')
-                        or message['from'].get('last_name')))
+                        text, message['from'].get('first_name') or
+                        message['from'].get('username') or
+                        message['from'].get('last_name')))
                     logging.info("Got command {} from {}".format(
-                        text, message['from'].get('first_name')
-                        or message['from'].get('username')
-                        or message['from'].get('last_name')))
-                    if db['super_admins'].find_one(
-                            telegram_id=message['from']['id']) or text == '/start':
+                        text, message['from'].get('first_name') or
+                        message['from'].get('username') or
+                        message['from'].get('last_name')))
+                    if db['super_admins'].find_one(telegram_id=message['from']
+                                                   ['id']) or text == '/start':
                         if text == '/register':
                             controller.register_target(
-                                message['chat'].get('title')
-                                or message['chat'].get('username'),
+                                message['chat'].get('title') or
+                                message['chat'].get('username'),
                                 message['chat']['id'])
                             bot.send_message(
                                 message['chat']['id'],
@@ -139,38 +142,51 @@ while running:
                             user = message['forward_from']
                             if user:
                                 db['admins'].insert({
-                                    'username': user.get('username') or user.get('first_name') or user.get('last_name'),
+                                    'username': user.get('username')
+                                                or user.get('first_name')
+                                                or user.get('last_name'),
                                     'telegram_id': user['id']
                                 })
                                 bot.send_message(
                                     message['chat']['id'],
                                     "User {} is now registered as an admin.".
                                     format(
-                                        user.get('username')
-                                        or user.get('first_name')
-                                        or user.get('last_name')), reply_to_message_id=message['message_id'])
+                                        user.get('username') or
+                                        user.get('first_name') or
+                                        user.get('last_name')),
+                                    reply_to_message_id=message['message_id'])
                         elif text == '/start':
                             bot.send_message(
                                 message['chat']['id'],
                                 "Just send me full name of the book and first name of the author and I'll find the book for you ;)...\nThe query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.",
                                 reply_to_message_id=message['message_id'])
                     continue
-                text = re.sub(r'[^[:ascii:]]+', ' ')
+                text = re.sub(r'[^[:ascii:]]+', ' ', text)
                 text = re.sub(r'\s{2,}', ' ', text.strip())
-                if len(text) < 10 or len(
-                        text) > 80 or ' ' not in text:
+                MIN_LENGTH = 10
+                MAX_LENGTH = 80
+                if len(text) < MIN_LENGTH or len(
+                        text) > MAX_LENGTH or ' ' not in text:
                     print("Invalid query \"{}\" from {}".format(
-                        text, message['from'].get('first_name')
-                        or message['from'].get('username')
-                        or message['from'].get('last_name')))
+                        text, message['from'].get('first_name') or
+                        message['from'].get('username') or
+                        message['from'].get('last_name')))
                     logging.info("Invalid query \"{}\" from {}".format(
-                        text, message['from'].get('first_name')
-                        or message['from'].get('username')
-                        or message['from'].get('last_name')))
+                        text, message['from'].get('first_name') or
+                        message['from'].get('username') or
+                        message['from'].get('last_name')))
                     print("Will send message")
+                    cause = ''
+                    if len(text) < MIN_LENGTH:
+                        cause = 'too short'
+                    elif len(text) > MAX_LENGTH:
+                        cause = 'too long'
+                    elif ' ' not in text:
+                        cause = 'the query has to contain multiple words in it'
                     bot.send_message(
                         chat['id'],
-                        "Invalid query. The query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard",
+                        "Invalid query - {cause}.\nThe query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.\nFor more information contact with @KoStard"
+                        .format(cause=cause),
                         reply_to_message_id=message['message_id'])
                     continue
                 print("Before algen", text)
@@ -182,8 +198,8 @@ while running:
                             user_id=message['from']['id'],
                             user_name=' '.join(
                                 filter(None,
-                                       (message['from'].get('first_name')
-                                        or message['from'].get('username'),
+                                       (message['from'].get('first_name') or
+                                        message['from'].get('username'),
                                         message['from'].get('last_name')))))
                     else:
                         info = algen(
@@ -191,17 +207,18 @@ while running:
                             db,
                             user_id=message['from']['id'],
                             user_name=' '.join(
-                                filter(None, (message['from'].get('first_name')
-                                            or message['from'].get('username'),
-                                            message['from'].get('last_name')))))
+                                filter(None,
+                                       (message['from'].get('first_name') or
+                                        message['from'].get('username'),
+                                        message['from'].get('last_name')))))
                 except Exception as e:
                     logging.info(e)
                     print(e)
                     add_invalid_query({
                         "query": text
                     }, db, message['from']['id'], ' '.join(
-                        filter(None, (message['from'].get('first_name')
-                                      or message['from'].get('username'),
+                        filter(None, (message['from'].get('first_name') or
+                                      message['from'].get('username'),
                                       message['from'].get('last_name')))))
                     bot.send_message(
                         chat['id'],
@@ -224,15 +241,15 @@ while running:
                             "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
                             .format(
                                 ' - '.join(
-                                    filter(None,
-                                           (info['title'],
-                                            info['authors'].split('|')[0],
-                                            str(info['year'])))),
+                                    filter(None, (info['title'],
+                                                  info['authors'].split('|')[0],
+                                                  str(info['year'] or
+                                                      ''), info['version']))),
                                 ' '.join(
                                     filter(
                                         None,
-                                        (message['from'].get('first_name')
-                                         or message['from'].get('username'),
+                                        (message['from'].get('first_name') or
+                                         message['from'].get('username'),
                                          message['from'].get('last_name'))))))
                     else:
                         bot.send_message(
@@ -240,15 +257,15 @@ while running:
                             "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
                             .format(
                                 ' - '.join(
-                                    filter(None,
-                                           (info['title'],
-                                            info['authors'].split('|')[0],
-                                            str(info['year'] or '')))),
+                                    filter(None, (info['title'],
+                                                  info['authors'].split('|')[0],
+                                                  str(info['year'] or
+                                                      ''), info['version']))),
                                 ' '.join(
                                     filter(
                                         None,
-                                        (message['from'].get('first_name')
-                                         or message['from'].get('username'),
+                                        (message['from'].get('first_name') or
+                                         message['from'].get('username'),
                                          message['from'].get('last_name'))))),
                             reply_to_message_id=message['message_id'])
                 elif info.get('cause'):
@@ -257,8 +274,7 @@ while running:
                         info['cause'],
                         reply_to_message_id=message['message_id'])
             if 'document' in message:
-                if not db['admins'].find_one(
-                        telegram_id=message['from']['id']):
+                if not db['admins'].find_one(telegram_id=message['from']['id']):
                     bot.send_message(
                         chat['id'],
                         "You can't send documents to the bot, if you want to publish books in the channel too, then contact with @KoStard",
@@ -269,9 +285,9 @@ while running:
                 file_id = document['file_id']
                 book = [
                     b for b in db['found_books'].find(file_found=False)
-                    if b.filename == filename
-                    or '.'.join(filename.split('.')
-                                [:-1]) in b.filename.replace(' - ','').replace(' ', '_')
+                    if b.filename == filename or
+                    '.'.join(filename.split('.')[:-1]) in b.filename.replace(
+                        ' - ', '').replace(' ', '_')
                 ]
                 if book:
                     book = book[0]
