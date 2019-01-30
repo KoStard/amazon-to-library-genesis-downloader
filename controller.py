@@ -20,6 +20,10 @@ def register_target(title, id):
     return db['targets'].insert({'title': title, 'telegram_id': id})
 
 
+def register_administrator_page(title, id):
+    return db['administrator_page'].insert({'title': title, 'telegram_id': id})
+
+
 def add_admin(username, telegram_id):
     return db['admins'].insert({
         'username': username,
