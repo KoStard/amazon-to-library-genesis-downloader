@@ -5,8 +5,7 @@ import re
 from bs4 import BeautifulSoup
 
 headers = {
-    'User-Agent':
-    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'
+    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'
 }
 
 
@@ -19,20 +18,17 @@ def algen(query, db, user_id=None, user_name=None):
     md5 = get_md5(content, query, db, user_id, user_name)
     if not md5:
         return {
-            "done":
-            False,
+            "done": False,
             "cause":
-            "Can't find book {}, it will be supervised by MedStard's team.".
-            format(query)
+                "Can't find book {}, it will be supervised by MedStard's team.".
+                format(query)
         }
     found_book = db['found_books'].find_one(md5=md5)
     if found_book:
         print("Already Found")
         return {
-            "done":
-            False,
-            "cause":
-            "Book {} was already added - {}".format(
+            "done": False,
+            "cause": "Book {} was already added - {}".format(
                 found_book.title,
                 'it should already be published' if found_book.processed else
                 'it will be published into the channel soon - @MedStard_Books')
@@ -175,8 +171,7 @@ def convert_download_url(info, db, user_id, user_name):
     base = '/'.join(info['download_url'].split('/')[:-1])
     ext = info['download_url'].split('/')[-1].split('.')
     if len(ext) == 1:
-        print("Invalid filename {}".format(
-            info['download_url'].split('/')[-1]))
+        print("Invalid filename {}".format(info['download_url'].split('/')[-1]))
         add_invalid_query({
             "query": info['query'],
             "found_url": info['download_url']
@@ -234,10 +229,8 @@ def add_from_md5(md5, db, *, query="", user_id=None, user_name="Admin"):
     if found_book:
         print("Already Found")
         return {
-            "done":
-            False,
-            "cause":
-            "Book {} was already added - {}".format(
+            "done": False,
+            "cause": "Book {} was already added - {}".format(
                 found_book.title,
                 'it should already be published' if found_book.processed else
                 'it will be published into the channel soon - @MedStard_Books')
