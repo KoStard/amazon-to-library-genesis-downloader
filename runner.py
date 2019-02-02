@@ -55,7 +55,7 @@ def create_book_caption(book):
                 book.series, book.publisher
             ])) + '\n' +
         ' '.join([
-            '#' + hashtag.replace(' ', '_').replace('-', '').replace('.', '')
+            '#' + re.sub(r'-.$,', '', re.sub(r'\s+' ,'_', hashtag))
             for hashtag in filter(None, [
                 book.series, book.publisher,
                 book.authors.split('|')[0].split(' ')[0]
@@ -68,12 +68,19 @@ def create_book_caption(book):
 
 def publish(bot, chat_id, book):
     if book.cover_image:
-        bot.send_image(
+        resp = bot.send_image(
             chat_id,
             open(book.cover_image, 'rb'),
             caption=create_book_caption(book),
             silent=True)
-        bot.send_document(chat_id, book.telegram_file_id, silent=True)
+        if resp:
+            bot.send_document(chat_id, book.telegram_file_id, silent=True)
+        else:
+            bot.send_document(
+                chat_id,
+                book.telegram_file_id,
+                caption=create_book_caption(book),
+                silent=True)
     else:
         bot.send_document(
             chat_id,
@@ -117,7 +124,7 @@ while running:
                     continue
                 if text == 'Operative Thoracic Surgery':
                     continue
-                if db['administrator_page'].find_one(chat['id']):
+                if db['administrator_page'].find_one(telegram_id=chat['id']):
                     pass  #- In the administrator page
                 else:
                     log_to_admpage('{} => {}'.format(from_name, text))
@@ -152,6 +159,7 @@ while running:
                                     file_found=True, published=False)
                                 for book in books:
                                     publish(bot, chat_id, book)
+                                    break #- temp
                             elif text == '/register_admin':
                                 user = message['forward_from']
                                 if user:
@@ -179,8 +187,8 @@ while running:
                     text = re.sub(r'\s{2,}', ' ', text.strip())
                     MIN_LENGTH = 10
                     MAX_LENGTH = 80
-                    if len(text) < MIN_LENGTH or len(
-                            text) > MAX_LENGTH or ' ' not in text:
+                    if text[0]!='*' and (len(text) < MIN_LENGTH or len(
+                            text) > MAX_LENGTH or ' ' not in text):
                         print("Invalid query \"{}\" from {}".format(
                             text, message['from'].get('first_name') or
                             message['from'].get('username') or
@@ -305,8 +313,8 @@ while running:
                 book = [
                     b for b in db['found_books'].find(file_found=False)
                     if b.filename == filename or
-                    '.'.join(filename.split('.')[:-1]) in b.filename.replace(
-                        ' - ', '').replace(' ', '_')
+                    '.'.join(filename.split('.')[:-1]) == b.filename.replace(
+                        '-', ' ').replace(' ', '_')[:len('.'.join(filename.split('.')[:-1]))]
                 ]
                 if book:
                     book = book[0]
