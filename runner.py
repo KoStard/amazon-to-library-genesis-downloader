@@ -139,8 +139,8 @@ while running:
             chat = message['chat']
             from_name = message['from'].get('first_name') or message[
                 'from'].get('username') or message['from'].get('last_name')
-            raw_text = message.get('text') or ''
-            for text in raw_text.split('\n'):
+            raw_text = (message.get('text') or '').split('\n')
+            for text in raw_text:
                 if not text:
                     continue
                 if text == 'Operative Thoracic Surgery':
@@ -328,6 +328,8 @@ while running:
                             info['cause'],
                             reply_to_message_id=message['message_id'])
                         log_to_admpage(info['cause'])
+            if len(raw_text) > 1:
+                bot.send_message(chat['id'], 'Finished processing of this message.', reply_to_message_id=message['message_id'])
             if 'document' in message:
                 if not db['admins'].find_one(telegram_id=message['from']['id']):
                     bot.send_message(
