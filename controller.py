@@ -31,11 +31,11 @@ def add_admin(username, telegram_id):
     })
 
 
-def export_download_links():
+def export_download_links(filename):
     links = [
         row.download_url for row in db['found_books'].find(processed=False)
     ]
-    open('links.txt', 'ab').write(
+    open(filename or 'links.txt', 'ab').write(
         ('\n' + '\n'.join(links).replace(' ', '%20') + '\n').encode())
     for row in db['found_books'].find(processed=False):
         row['processed'] = True
