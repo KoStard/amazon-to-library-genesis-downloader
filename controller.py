@@ -35,8 +35,8 @@ def export_download_links():
     links = [
         row.download_url for row in db['found_books'].find(processed=False)
     ]
-    open('links.txt',
-         'a').write('\n' + '\n'.join(links).replace(' ', '%20') + '\n')
+    open('links.txt', 'ab').write(
+        ('\n' + '\n'.join(links).replace(' ', '%20') + '\n').encode())
     for row in db['found_books'].find(processed=False):
         row['processed'] = True
         db['found_books'].update(row, ['id'])
