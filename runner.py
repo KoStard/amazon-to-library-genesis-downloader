@@ -206,7 +206,10 @@ while running:
                             elif text == '/export_download_links':
                                 links_file_name = get_unique_name('exported_links.txt')
                                 controller.export_download_links(links_file_name)
-                                bot.send_document(message['chat']['id'], open(links_file_name, 'rb'))
+                                try:
+                                    bot.send_document(message['chat']['id'], open(links_file_name, 'rb'))
+                                except Exception as e:
+                                    print(e)
                         continue
                     text = re.sub(r'[^[:ascii:]]+', ' ', text)
                     text = re.sub(r'\s{2,}', ' ', text.strip())

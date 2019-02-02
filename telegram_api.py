@@ -148,12 +148,11 @@ class Bot:
                       caption=None,
                       reply_to_message_id=None,
                       silent=False):
-        if not (isinstance(participant_group, str) or
-                isinstance(participant_group, int)):
-            participant_group = participant_group.telegram_id
+        if not (isinstance(group, str) or isinstance(group, int)):
+            group = group.telegram_id
         url = self.base_url + 'sendDocument'
         payload = {
-            'chat_id': participant_group,
+            'chat_id': group,
             'caption': caption,
             'reply_to_message_id': reply_to_message_id,
             'disable_notification': silent,
