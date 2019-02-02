@@ -7,6 +7,7 @@ import controller
 import logging
 from time import sleep
 from datetime import datetime
+import os
 db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
 
 bot_data = db['bots'].find_one(selected=True)
@@ -74,15 +75,15 @@ def publish(bot, chat_id, book):
             caption=create_book_caption(book),
             silent=True)
         if resp:
-            bot.send_document(chat_id, book.telegram_file_id, silent=True)
+            bot.send_document_by_file_id(chat_id, book.telegram_file_id, silent=True)
         else:
-            bot.send_document(
+            bot.send_document_by_file_id(
                 chat_id,
                 book.telegram_file_id,
                 caption=create_book_caption(book),
                 silent=True)
     else:
-        bot.send_document(
+        bot.send_document_by_file_id(
             chat_id,
             book.telegram_file_id,
             caption=create_book_caption(book),
@@ -90,6 +91,26 @@ def publish(bot, chat_id, book):
     book.published = True
     book.publication_day_of_year = datetime.now().timetuple().tm_yday
     db['found_books'].update(book, ['id'])
+
+
+def get_unique_name(filename):
+    dirname = os.path.dirname(filename)
+    filename = filename[len(dirname) + (1 if dirname else 0):]
+    content = os.listdir(dirname or None)
+    if filename in content:
+        if '.' in filename:
+            name = '.'.join(filename.split('.')[:-1])
+            ext = filename[len(name) + (1 if name else 0):]
+        else:
+            name = filename
+            ext = ''
+        i = 1
+        while '{}-{}.{}'.format(name, i, ext) in content:
+            i += 1
+        return dirname + ('/' if dirname else '') + '{}-{}.{}'.format(
+            name, i, ext)
+    else:
+        return dirname + ('/' if dirname else '') + filename
 
 
 def offset_setter(new_offset):
@@ -159,7 +180,7 @@ while running:
                                     file_found=True, published=False)
                                 for book in books:
                                     publish(bot, chat_id, book)
-                                    break #- temp
+                                    break  #- temp
                             elif text == '/register_admin':
                                 user = message['forward_from']
                                 if user:
@@ -182,6 +203,10 @@ while running:
                                     message['chat']['id'],
                                     "Just send me full name of the book and first name of the author and I'll find the book for you ;)...\nThe query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.",
                                     reply_to_message_id=message['message_id'])
+                            elif text == '/export_download_links':
+                                links_file_name = get_unique_name('exported_links.txt')
+                                controller.export_download_links(links_file_name)
+                                bot.send_document(message['chat']['id'], open(links_file_name, 'rb'))
                         continue
                     text = re.sub(r'[^[:ascii:]]+', ' ', text)
                     text = re.sub(r'\s{2,}', ' ', text.strip())
