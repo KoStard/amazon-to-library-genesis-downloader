@@ -121,13 +121,13 @@ class Bot:
         )
         return resp
 
-    def send_document(self,
-                      group: str,
-                      file_id: str or int,
-                      *,
-                      caption=None,
-                      reply_to_message_id=None,
-                      silent=False):
+    def send_document_by_file_id(self,
+                                 group: str,
+                                 file_id: str or int,
+                                 *,
+                                 caption=None,
+                                 reply_to_message_id=None,
+                                 silent=False):
         file_id = str(file_id)
         url = self.base_url + 'sendDocument'
         payload = {
@@ -139,6 +139,31 @@ class Bot:
         }
         resp = get_response(
             url, params=payload, headers={"Content-Type": "application/json"})
+        return resp
+
+    def send_document(self,
+                      group: str,
+                      file: io.BufferedReader,
+                      *,
+                      caption=None,
+                      reply_to_message_id=None,
+                      silent=False):
+        if not (isinstance(participant_group, str) or
+                isinstance(participant_group, int)):
+            participant_group = participant_group.telegram_id
+        url = self.base_url + 'sendDocument'
+        payload = {
+            'chat_id': participant_group,
+            'caption': caption,
+            'reply_to_message_id': reply_to_message_id,
+            'disable_notification': silent,
+        }
+        files = {'document': file}
+        resp = get_response(
+            url,
+            params=payload,
+            files=files,
+        )
         return resp
 
     def delete_message(self, participant_group: str, message_id: int or str):
