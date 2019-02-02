@@ -52,11 +52,11 @@ def create_book_caption(book):
         r'([\\/|:*?"\’<>]|[^[:ascii:]])', '', ' - '.join(
             filter(None, [
                 book.title + (' ' + book.version if book.version else ''),
-                str(book.year), ', '.join(book.authors.split('|')[:2]),
+                str(book.year or ''), ', '.join(book.authors.split('|')[:2]),
                 book.series, book.publisher
             ])) + '\n' +
-        ' '.join([
-            '#' + re.sub(r'-.$,', '', re.sub(r'\s+' ,'_', hashtag))
+        ' '.join([ht for ht in (
+            '#' + re.sub(r'([-.$,&;\'"]|\([^)+]\))', '', re.sub(r'\s+', '_', hashtag.strip()))
             for hashtag in filter(None, [
                 book.series, book.publisher,
                 book.authors.split('|')[0].split(' ')[0]
@@ -64,7 +64,7 @@ def create_book_caption(book):
                 tag for tag in tags if re.search(
                     r'(^|\s)' + tag.lower() + r'(\s|$)', book.title.lower())
             ])
-        ]))
+        ) if len(ht) >= 3]))
 
 
 def publish(bot, chat_id, book):
@@ -180,7 +180,6 @@ while running:
                                     file_found=True, published=False)
                                 for book in books:
                                     publish(bot, chat_id, book)
-                                    break  #- temp
                             elif text == '/register_admin':
                                 user = message['forward_from']
                                 if user:
@@ -343,8 +342,8 @@ while running:
                 book = [
                     b for b in db['found_books'].find(file_found=False)
                     if b.filename == filename or
-                    '.'.join(filename.split('.')[:-1]) == b.filename.replace(
-                        '-', ' ').replace(' ', '_')[:len('.'.join(filename.split('.')[:-1]))]
+                    '.'.join(filename.split('.')[:-1]) == re.sub(r'\s+', '_', b.filename.replace(
+                        '-', ' '))[:len('.'.join(filename.split('.')[:-1]))]
                 ]
                 if book:
                     book = book[0]
