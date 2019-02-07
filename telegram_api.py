@@ -101,8 +101,11 @@ class Bot:
                    image_file: io.BufferedReader,
                    *,
                    caption='',
+                   parse_mode='HTML',
                    reply_to_message_id=None,
                    silent=False):
+        if parse_mode == 'Markdown':
+            text = text.replace('_', '\_')
         if not (isinstance(participant_group, str) or
                 isinstance(participant_group, int)):
             participant_group = participant_group.telegram_id
@@ -114,6 +117,8 @@ class Bot:
             'disable_notification': silent,
         }
         files = {'photo': image_file}
+        if parse_mode:
+            payload['parse_mode'] = parse_mode
         resp = get_response(
             url,
             params=payload,
