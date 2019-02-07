@@ -41,7 +41,7 @@ def configure_logging():
 configure_logging()
 
 
-def log_to_admpage(text,*,sub=False):
+def log_to_admpage(text, *, sub=False):
     if db['administrator_page'].count():
         bot.send_message(db['administrator_page'].find_one().telegram_id,
                          "{} {}".format('|=>' if not sub else '└', text))
@@ -55,16 +55,19 @@ def create_book_caption(book):
                 str(book.year or ''), ', '.join(book.authors.split('|')[:2]),
                 book.series, book.publisher
             ])) + '\n' +
-        ' '.join([ht for ht in (
-            '#' + re.sub(r'([-.$,&;\'"]|\([^)+]\))', '', re.sub(r'\s+', '_', hashtag.strip()))
-            for hashtag in filter(None, [
-                book.series, book.publisher,
-                book.authors.split('|')[0].split(' ')[0]
-            ] + [
-                tag for tag in tags if re.search(
-                    r'(^|\s)' + tag.lower() + r'(\s|$)', book.title.lower())
-            ])
-        ) if len(ht) >= 3]))
+        ' '.join([
+            ht for ht in ('#' + re.sub(r'([-.$,&;\'"]|\([^)+]\))', '',
+                                       re.sub(r'\s+', '_', hashtag.strip()))
+                          for hashtag in filter(None, [
+                              book.series, book.publisher,
+                              book.authors.split('|')[0].split(' ')[0]
+                          ] + [
+                              tag
+                              for tag in tags
+                              if re.search(r'(^|\s)' + tag.lower() +
+                                           r'(\s|$)', book.title.lower())
+                          ])) if len(ht) >= 3
+        ]))
 
 
 def publish(bot, chat_id, book):
@@ -75,7 +78,8 @@ def publish(bot, chat_id, book):
             caption=create_book_caption(book),
             silent=True)
         if resp:
-            bot.send_document_by_file_id(chat_id, book.telegram_file_id, silent=True)
+            bot.send_document_by_file_id(
+                chat_id, book.telegram_file_id, silent=True)
         else:
             bot.send_document_by_file_id(
                 chat_id,
@@ -135,6 +139,8 @@ while running:
             logging.info(update)
             if last_update: offset_setter(last_update['update_id'] + 1)
             last_update = update
+            if not 'message' in update:
+                continue
             message = update['message']
             chat = message['chat']
             from_name = message['from'].get('first_name') or message[
@@ -143,8 +149,9 @@ while running:
             for text in raw_text:
                 if not text:
                     continue
-                if text == 'Operative Thoracic Surgery':
-                    continue
+                # if text[0] != '/':
+                #     bot.send_message(chat['id'], 'Sorry, but the bot is now closed and I don\'t know when it will be reopened.', reply_to_message_id=message['message_id'])
+                #     continue
                 if db['administrator_page'].find_one(telegram_id=chat['id']):
                     pass  #- In the administrator page
                 else:
@@ -156,8 +163,9 @@ while running:
                         print("Got command {} from {}".format(text, from_name))
                         logging.info("Got command {} from {}".format(
                             text, from_name))
-                        if db['super_admin'].find_one(telegram_id=message['from']
-                                                    ['id']) or text == '/start':
+                        if db['super_admin'].find_one(
+                                telegram_id=message['from']
+                            ['id']) or text == '/start':
                             if text == '/register':
                                 controller.register_target(
                                     message['chat'].get('title') or
@@ -169,13 +177,15 @@ while running:
                                     reply_to_message_id=message['message_id'])
                             if text == '/register_administrator_page':
                                 controller.register_administrator_page(
-                                    message['chat']['title'], message['chat']['id'])
+                                    message['chat']['title'],
+                                    message['chat']['id'])
                                 bot.send_message(
                                     message['chat']['id'],
                                     "This target is now registered as an administrator page, now you'll get logs here.",
                                     reply_to_message_id=message['message_id'])
                             elif text == '/publish':
-                                chat_id = db['targets'].find_one(id=2).telegram_id
+                                chat_id = db['targets'].find_one(
+                                    id=2).telegram_id
                                 books = db['found_books'].find(
                                     file_found=True, published=False)
                                 for book in books:
@@ -191,22 +201,27 @@ while running:
                                     })
                                     bot.send_message(
                                         message['chat']['id'],
-                                        "User {} is now registered as an admin.".
-                                        format(
+                                        "User {} is now registered as an admin."
+                                        .format(
                                             user.get('username') or
                                             user.get('first_name') or
                                             user.get('last_name')),
-                                        reply_to_message_id=message['message_id'])
+                                        reply_to_message_id=message[
+                                            'message_id'])
                             elif text == '/start':
                                 bot.send_message(
                                     message['chat']['id'],
                                     "Just send me full name of the book and first name of the author and I'll find the book for you ;)...\nThe query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.",
                                     reply_to_message_id=message['message_id'])
                             elif text == '/export_download_links':
-                                links_file_name = get_unique_name('exported_links.txt')
-                                controller.export_download_links(links_file_name)
+                                links_file_name = get_unique_name(
+                                    'exported_links.txt')
+                                controller.export_download_links(
+                                    links_file_name)
                                 try:
-                                    bot.send_document(message['chat']['id'], open(links_file_name, 'rb'))
+                                    bot.send_document(
+                                        message['chat']['id'],
+                                        open(links_file_name, 'rb'))
                                 except Exception as e:
                                     print(e)
                         continue
@@ -214,8 +229,9 @@ while running:
                     text = re.sub(r'\s{2,}', ' ', text.strip())
                     MIN_LENGTH = 10
                     MAX_LENGTH = 80
-                    if text[0]!='*' and (len(text) < MIN_LENGTH or len(
-                            text) > MAX_LENGTH or ' ' not in text):
+                    if text[0] != '*' and (len(text) < MIN_LENGTH or
+                                           len(text) > MAX_LENGTH or
+                                           ' ' not in text):
                         print("Invalid query \"{}\" from {}".format(
                             text, message['from'].get('first_name') or
                             message['from'].get('username') or
@@ -239,6 +255,7 @@ while running:
                             reply_to_message_id=message['message_id'])
                         continue
                     print("Before algen", text)
+                    MODE = "link"
                     try:
                         if text[0] == '*':
                             info = add_from_md5(
@@ -247,9 +264,10 @@ while running:
                                 user_id=message['from']['id'],
                                 user_name=' '.join(
                                     filter(None,
-                                        (message['from'].get('first_name') or
+                                           (message['from'].get('first_name') or
                                             message['from'].get('username'),
-                                            message['from'].get('last_name')))))
+                                            message['from'].get('last_name')))),
+                                mode=MODE)
                         else:
                             info = algen(
                                 text,
@@ -257,9 +275,10 @@ while running:
                                 user_id=message['from']['id'],
                                 user_name=' '.join(
                                     filter(None,
-                                        (message['from'].get('first_name') or
+                                           (message['from'].get('first_name') or
                                             message['from'].get('username'),
-                                            message['from'].get('last_name')))))
+                                            message['from'].get('last_name')))),
+                                mode=MODE)
                     except Exception as e:
                         logging.info(e)
                         print(e)
@@ -267,8 +286,8 @@ while running:
                             "query": text
                         }, db, message['from']['id'], ' '.join(
                             filter(None, (message['from'].get('first_name') or
-                                        message['from'].get('username'),
-                                        message['from'].get('last_name')))))
+                                          message['from'].get('username'),
+                                          message['from'].get('last_name')))))
                         log_to_admpage("Problem with getting data of the book.")
                         bot.send_message(
                             chat['id'],
@@ -282,9 +301,11 @@ while running:
                                                         info['user_name']))
                         logging.info("Added {} from {}".format(
                             info['title'], info['user_name']))
-                        log_to_admpage("N{} - Added {} from {}".format(
-                            db['found_books'].count(), info['title'],
-                            info['user_name']), sub=True)
+                        log_to_admpage(
+                            "N{} - Added {} from {}".format(
+                                db['found_books'].count(), info['title'],
+                                info['user_name']),
+                            sub=True)
                         if info['cover_image']:
                             bot.send_image(
                                 chat['id'],
@@ -294,32 +315,54 @@ while running:
                                 "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
                                 .format(
                                     ' - '.join(
-                                        filter(None, (info['title'],
-                                                    info['authors'].split('|')[0],
-                                                    str(info['year'] or
-                                                        ''), info['version']))),
+                                        filter(None,
+                                               (info['title'],
+                                                info['authors'].split('|')[0],
+                                                str(info['year'] or ''),
+                                                info['version']))),
                                     ' '.join(
-                                        filter(
-                                            None,
-                                            (message['from'].get('first_name') or
+                                        filter(None, (
+                                            message['from'].get('first_name') or
                                             message['from'].get('username'),
-                                            message['from'].get('last_name'))))))
+                                            message['from'].get('last_name')))))
+                                if MODE == 'standard' else
+                                ('Found book - {}\n<a href="{}">Download</a>'.
+                                 format(
+                                     ' - '.join(
+                                         filter(None,
+                                                (info['title'],
+                                                 info['authors'].split('|')[0],
+                                                 str(info['year'] or ''),
+                                                 info['version']))),
+                                     info['download_url'])
+                                 if MODE == 'link' else ''))
                         else:
                             bot.send_message(
                                 chat['id'],
                                 "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."
                                 .format(
                                     ' - '.join(
-                                        filter(None, (info['title'],
-                                                    info['authors'].split('|')[0],
-                                                    str(info['year'] or
-                                                        ''), info['version']))),
+                                        filter(None,
+                                               (info['title'],
+                                                info['authors'].split('|')[0],
+                                                str(info['year'] or ''),
+                                                info['version']))),
                                     ' '.join(
-                                        filter(
-                                            None,
-                                            (message['from'].get('first_name') or
+                                        filter(None, (
+                                            message['from'].get('first_name') or
                                             message['from'].get('username'),
-                                            message['from'].get('last_name'))))),
+                                            message['from'].get('last_name')))))
+                                if MODE == 'standard' else
+                                ('Found book - {}\n\\<a href="{}">Download\\</a>'.
+                                 format(
+                                     ' - '.join(
+                                         filter(None,
+                                                (info['title'],
+                                                 info['authors'].split('|')[0],
+                                                 str(info['year'] or ''),
+                                                 info['version']))),
+                                     info['download_url'])
+                                 if MODE == 'link' else ''),
                                 reply_to_message_id=message['message_id'])
                     elif info.get('cause'):
                         bot.send_message(
@@ -328,7 +371,10 @@ while running:
                             reply_to_message_id=message['message_id'])
                         log_to_admpage(info['cause'])
             if len(raw_text) > 1:
-                bot.send_message(chat['id'], 'Finished processing of this message.', reply_to_message_id=message['message_id'])
+                bot.send_message(
+                    chat['id'],
+                    'Finished processing of this message.',
+                    reply_to_message_id=message['message_id'])
             if 'document' in message:
                 if not db['admins'].find_one(telegram_id=message['from']['id']):
                     bot.send_message(
@@ -342,8 +388,9 @@ while running:
                 book = [
                     b for b in db['found_books'].find(file_found=False)
                     if b.filename == filename or
-                    '.'.join(filename.split('.')[:-1]) == re.sub(r'\s+', '_', b.filename.replace(
-                        '-', ' '))[:len('.'.join(filename.split('.')[:-1]))]
+                    '.'.join(filename.split('.')[:-1]) == re.sub(
+                        r'\s+', '_', b.filename.replace(
+                            '-', ' '))[:len('.'.join(filename.split('.')[:-1]))]
                 ]
                 if book:
                     book = book[0]
