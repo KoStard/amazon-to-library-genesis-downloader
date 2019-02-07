@@ -9,7 +9,7 @@ headers = {
 }
 
 
-def algen(query, db, user_id=None, user_name=None):
+def algen(query, db, user_id=None, user_name=None, mode='standard'):
     """ Just give search query and the program will search and
     give you the link, details and the cover of the newest version """
     if not query: return {"done": False}
@@ -24,7 +24,7 @@ def algen(query, db, user_id=None, user_name=None):
                 format(query)
         }
     found_book = db['found_books'].find_one(md5=md5)
-    if found_book:
+    if found_book and mode == 'standard':
         print("Already Found")
         return {
             "done": False,
@@ -39,7 +39,8 @@ def algen(query, db, user_id=None, user_name=None):
     durl = convert_download_url(info, db, user_id, user_name)
     if not durl: return {"done": False}
     download_cover_image(info, db, user_id, user_name)
-    save_book_info(info, db, user_id, user_name)
+    if mode == 'standard':
+        save_book_info(info, db, user_id, user_name)
     return {"done": True, "info": info}
 
 
@@ -101,7 +102,7 @@ def load_book_info(md5, query, db, user_id, user_name):
         'cover_image': '',
         'title': '',
         'version': '',
-        'authors': [],
+        'authors': '',
         'series': '',
         'publisher': '',
         'year': None,
@@ -111,6 +112,8 @@ def load_book_info(md5, query, db, user_id, user_name):
         'file_found': False,
         'published': False,
         "publication_day_of_year": None,
+        'user_name': user_name,
+        'user_id': user_id,
     }
 
     for child in info_children:
@@ -130,7 +133,7 @@ def load_book_info(md5, query, db, user_id, user_name):
                 if text.count(': ') == 1:
                     marker, content, *args = text.split(': ')
                     if marker == 'Author(s)':
-                        res['authors'] = content.split(', ')
+                        res['authors'] = '|'.join(content.split(', '))
                     elif marker == 'Series':
                         res['series'] = content
                 else:
@@ -162,9 +165,11 @@ def create_filename_base(info):
     """ The max length is 70 """
     return re.sub(
         r'([\\/|:*?"\'’<>]|[^[:ascii:]])', '', ' - '.join(
-            filter(None, (info['title'],
-                          (info['authors'][0] if info['authors'] else None),
-                          str(info['year']))))).strip()[:70]
+            filter(
+                None,
+                (info['title'],
+                 (info['authors'].split('|')[0] if info['authors'] else None),
+                 str(info['year']))))).strip()[:70]
 
 
 def convert_download_url(info, db, user_id, user_name):
@@ -207,19 +212,14 @@ def download_cover_image(info, db, user_id, user_name):
 
 
 def save_book_info(info, db, user_id, user_name):
-    info['user_id'] = user_id
-    info['user_name'] = user_name
     found_books = db['found_books']
     if found_books.find_one(md5=info['md5']):
         pass
-    info['authors'] = '|'.join(info['authors'])
     found_books.insert(info)
 
 
 def add_invalid_query(data, db, user_id, user_name):
     """ {query} or {query, found_url} """
-    data['user_id'] = user_id
-    data['user_name'] = user_name
     if not db['invalid_queries'].find_one(query=data['query']):
         db['invalid_queries'].insert(data)
 
