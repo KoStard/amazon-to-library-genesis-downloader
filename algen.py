@@ -1,5 +1,3 @@
-import dataset
-from stuf import stuf
 import requests
 import re
 from bs4 import BeautifulSoup
@@ -38,7 +36,7 @@ def algen(query, db, user_id=None, user_name=None, mode='standard'):
     load_book_version(info)
     durl = convert_download_url(info, db, user_id, user_name)
     if not durl: return {"done": False}
-    download_cover_image(info, db, user_id, user_name)
+    download_cover_image(info, db, user_id, user_name, mode)
     if mode == 'standard':
         save_book_info(info, db, user_id, user_name)
     return {"done": True, "info": info}
@@ -196,9 +194,13 @@ def convert_download_url(info, db, user_id, user_name):
     return info['download_url']
 
 
-def download_cover_image(info, db, user_id, user_name):
+def download_cover_image(info, db, user_id, user_name, mode='standard'):
     if info['image_url']:
         info['image_url'] = 'http://gen.lib.rus.ec' + info['image_url']
+        print("In download cover image the mode is", mode)
+        if mode == 'link':
+            info['cover_image'] = info['image_url']
+            return
         resp = requests.get(info['image_url'], headers)
         if resp.ok:
             cover_filename = 'covers/{base}_cover.{ext}'.format(
@@ -224,7 +226,7 @@ def add_invalid_query(data, db, user_id, user_name):
         db['invalid_queries'].insert(data)
 
 
-def add_from_md5(md5, db, *, query="", user_id=None, user_name="Admin"):
+def add_from_md5(md5, db, *, query="", user_id=None, user_name="Admin", mode='standard'):
     found_book = db['found_books'].find_one(md5=md5)
     if found_book:
         print("Already Found")
@@ -240,11 +242,14 @@ def add_from_md5(md5, db, *, query="", user_id=None, user_name="Admin"):
     load_book_version(info)
     durl = convert_download_url(info, db, user_id, user_name)
     if not durl: return {"done": False}
-    download_cover_image(info, db, user_id, user_name)
-    save_book_info(info, db, user_id, user_name)
+    download_cover_image(info, db, user_id, user_name, mode)
+    if mode == 'standard':
+        save_book_info(info, db, user_id, user_name)
     return {"done": True, "info": info}
 
 
 if __name__ == '__main__':
+    import dataset
+    from stuf import stuf
     db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
     algen(input('Write query to find: '), db)

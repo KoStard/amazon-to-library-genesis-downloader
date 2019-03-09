@@ -135,7 +135,6 @@ while running:
         updates = bot.update()
         last_update = None
         for update in updates:
-            print(update)
             logging.info(update)
             if last_update: offset_setter(last_update['update_id'] + 1)
             last_update = update
@@ -209,6 +208,7 @@ while running:
                                         reply_to_message_id=message[
                                             'message_id'])
                             elif text == '/start':
+                                print("Sending start command response")
                                 bot.send_message(
                                     message['chat']['id'],
                                     "Just send me full name of the book and first name of the author and I'll find the book for you ;)...\nThe query has to be longer than 9 characters, shorter than 81 characters and contain both the book name and author name - only English is supported.",
@@ -309,7 +309,7 @@ while running:
                         if info['cover_image']:
                             bot.send_image(
                                 chat['id'],
-                                open(info['cover_image'], 'rb'),
+                                open(info['cover_image'], 'rb') if MODE != 'link' else info['cover_image'],
                                 reply_to_message_id=message['message_id'],
                                 caption=
                                 "Added book {}\nFrom: {}\nIt will be published into the channel soon - @MedStard_Books."

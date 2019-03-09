@@ -98,14 +98,14 @@ class Bot:
 
     def send_image(self,
                    participant_group: 'text/id or group',
-                   image_file: io.BufferedReader,
+                   image_file: io.BufferedReader or str,
                    *,
                    caption='',
                    parse_mode='HTML',
                    reply_to_message_id=None,
                    silent=False):
         if parse_mode == 'Markdown':
-            text = text.replace('_', '\_')
+            caption = caption.replace('_', '\\_')
         if not (isinstance(participant_group, str) or
                 isinstance(participant_group, int)):
             participant_group = participant_group.telegram_id
@@ -116,7 +116,12 @@ class Bot:
             'reply_to_message_id': reply_to_message_id,
             'disable_notification': silent,
         }
-        files = {'photo': image_file}
+        if isinstance(image_file, str):
+            payload['photo'] = image_file
+            print("The image file is", image_file)
+            files = None
+        else:
+            files = {'photo': image_file}
         if parse_mode:
             payload['parse_mode'] = parse_mode
         resp = get_response(
