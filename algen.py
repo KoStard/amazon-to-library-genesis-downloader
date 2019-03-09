@@ -1,6 +1,7 @@
 import requests
 import re
 from bs4 import BeautifulSoup
+import logging
 
 headers = {
     'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'
@@ -200,6 +201,7 @@ def download_cover_image(info, db, user_id, user_name, mode='standard'):
         print("In download cover image the mode is", mode)
         if mode == 'link':
             info['cover_image'] = info['image_url']
+            logging.info(f"@IMAGE@ {info['cover_image']}")
             return
         resp = requests.get(info['image_url'], headers)
         if resp.ok:
