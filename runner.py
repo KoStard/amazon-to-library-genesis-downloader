@@ -302,8 +302,8 @@ while running:
                         logging.info("Added {} from {}".format(
                             info['title'], info['user_name']))
                         log_to_admpage(
-                            "N{} - Added {} from {}".format(
-                                db['found_books'].count(), info['title'],
+                            "N-- - Added {} from {}".format(
+                                info['title'],
                                 info['user_name']),
                             sub=True)
                         if info['cover_image']:
