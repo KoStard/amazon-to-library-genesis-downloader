@@ -80,7 +80,7 @@ def get_md5(content, query, db, user_id, user_name):
 
 
 def load_book_info(md5, query, db, user_id, user_name):
-    url = 'http://lib1.org/_ads/{md5}'.format(md5=md5)
+    url = 'http://library1.org/_ads/{md5}'.format(md5=md5)
     page = requests.get(url, headers)
     if not page.ok:
         print("Not OK in the load_book_info")
