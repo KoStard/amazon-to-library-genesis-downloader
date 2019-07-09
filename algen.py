@@ -4,7 +4,8 @@ from bs4 import BeautifulSoup
 import logging
 
 headers = {
-    'User-Agent': 'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'
+    'User-Agent':
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/42.0.2311.90 Safari/537.36'
 }
 
 
@@ -17,17 +18,20 @@ def algen(query, db, user_id=None, user_name=None, mode='standard'):
     md5 = get_md5(content, query, db, user_id, user_name)
     if not md5:
         return {
-            "done": False,
+            "done":
+            False,
             "cause":
-                "Can't find book {}, it will be supervised by MedStard's team.".
-                format(query)
+            "Can't find book {}, it will be supervised by MedStard's team.".
+            format(query)
         }
     found_book = db['found_books'].find_one(md5=md5)
     if found_book and mode == 'standard':
         print("Already Found")
         return {
-            "done": False,
-            "cause": "Book {} was already added - {}".format(
+            "done":
+            False,
+            "cause":
+            "Book {} was already added - {}".format(
                 found_book.title,
                 'it should already be published' if found_book.processed else
                 'it will be published into the channel soon - @MedStard_Books')
@@ -80,7 +84,7 @@ def get_md5(content, query, db, user_id, user_name):
 
 
 def load_book_info(md5, query, db, user_id, user_name):
-    url = 'http://library1.org/_ads/{md5}'.format(md5=md5)
+    url = 'http://93.174.95.29/_ads/{md5}'.format(md5=md5)
     page = requests.get(url, headers)
     if not page.ok:
         print("Not OK in the load_book_info")
@@ -175,7 +179,8 @@ def convert_download_url(info, db, user_id, user_name):
     base = '/'.join(info['download_url'].split('/')[:-1])
     ext = info['download_url'].split('/')[-1].split('.')
     if len(ext) == 1:
-        print("Invalid filename {}".format(info['download_url'].split('/')[-1]))
+        print("Invalid filename {}".format(
+            info['download_url'].split('/')[-1]))
         add_invalid_query({
             "query": info['query'],
             "found_url": info['download_url']
@@ -228,13 +233,21 @@ def add_invalid_query(data, db, user_id, user_name):
         db['invalid_queries'].insert(data)
 
 
-def add_from_md5(md5, db, *, query="", user_id=None, user_name="Admin", mode='standard'):
+def add_from_md5(md5,
+                 db,
+                 *,
+                 query="",
+                 user_id=None,
+                 user_name="Admin",
+                 mode='standard'):
     found_book = db['found_books'].find_one(md5=md5)
     if found_book:
         print("Already Found")
         return {
-            "done": False,
-            "cause": "Book {} was already added - {}".format(
+            "done":
+            False,
+            "cause":
+            "Book {} was already added - {}".format(
                 found_book.title,
                 'it should already be published' if found_book.processed else
                 'it will be published into the channel soon - @MedStard_Books')
