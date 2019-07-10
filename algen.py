@@ -122,7 +122,7 @@ def load_book_info(md5, query, db, user_id, user_name):
     for child in info_children:
         tag = child.name
         if tag == 'h2':
-            res['download_url'] = child.a.attrs['href']
+            res['download_url'] = 'http://93.174.95.29' + child.a.attrs['href']
         elif tag == 'div':
             if child.img:
                 url = child.img.attrs['src']
@@ -267,4 +267,4 @@ if __name__ == '__main__':
     import dataset
     from stuf import stuf
     db = dataset.connect('sqlite:///books_data.db', row_type=stuf)
-    algen(input('Write query to find: '), db)
+    print(algen(input('Write query to find: '), db))
