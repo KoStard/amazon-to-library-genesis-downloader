@@ -1,18 +1,54 @@
 import json
 import requests
 import io
+import time
 MESSAGE_MAX_LENGTH = 4096
 
 
-def get_response(*args, **kwargs):
-    if 'files' in kwargs:
-        resp = requests.post(*args, **kwargs)
+def get_response(url, *, payload=None, files=None, use_post=False, raw=False, max_retries=3, timeout=None):
+    """ Will get response with get/post based on files existance """
+    headers = {"Content-Type": "application/json"}
+    if timeout is None:
+        if payload is None or 'timeout' not in payload:
+            timeout = 10
+        else:
+            timeout = payload['timeout']*1.5 or 10
+    cycle = 0
+    while True:
+        cycle += 1
+        try:
+            if files or use_post:
+                resp = requests.post(url, params=payload, files=files, timeout=timeout)
+            else:
+                resp = requests.get(url, params=payload, timeout=timeout)
+            break
+        except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
+            if cycle >= max_retries:
+                time.sleep(2)  # Will always try to connect
+                print("Trying to reconnect...")
+    data = resp.json()
+    if resp.status_code == 200:
+        if raw:
+            return resp.content
+        return data.get("result") if data.get("result") is not None else data
+    elif data.get('error_code') == 400:
+        if data.get('description') == 'Bad Request: reply message not found':
+            del payload['reply_to_message_id']  # Sending the message without replying
+            return get_response(url,
+                                payload=payload,
+                                files=files,
+                                use_post=use_post,
+                                raw=raw,
+                                max_retries=max_retries,
+                                timeout=timeout)
+        elif data.get('description') == 'Bad Request: message to delete not found':
+            return   # The message is already removed
+        elif data.get('description') == 'Forbidden: bot was blocked by the user':
+            return
     else:
-        resp = requests.get(*args, **kwargs)
-    if resp.ok:
-        return json.loads(resp.content).get('result')
-    else:
-        print(resp.content)
+        print(resp.__dict__)
+        pass
+    return resp
 
 
 class Bot:
