@@ -43,7 +43,8 @@ def get_response(url, *, payload=None, files=None, use_post=False, raw=False, ma
                                 timeout=timeout)
         elif data.get('description') == 'Bad Request: message to delete not found':
             return   # The message is already removed
-        elif data.get('description') == 'Forbidden: bot was blocked by the user':
+    elif data.get('error_code') == 403:
+        if data.get('description') == 'Forbidden: bot was blocked by the user':
             return
     else:
         print(resp.__dict__)
