@@ -18,9 +18,9 @@ def get_response(url, *, payload=None, files=None, use_post=False, raw=False, ma
         cycle += 1
         try:
             if files or use_post:
-                resp = requests.post(url, payload=payload, files=files, timeout=timeout)
+                resp = requests.post(url, params=payload, files=files, timeout=timeout)
             else:
-                resp = requests.get(url, payload=payload, timeout=timeout)
+                resp = requests.get(url, params=payload, timeout=timeout)
             break
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             if cycle >= max_retries:
