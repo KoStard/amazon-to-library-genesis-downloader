@@ -18,9 +18,9 @@ def get_response(url, *, payload=None, files=None, use_post=False, raw=False, ma
         cycle += 1
         try:
             if files or use_post:
-                resp = requests.post(url, params=payload, files=files, timeout=timeout)
+                resp = requests.post(url, payload=payload, files=files, timeout=timeout)
             else:
-                resp = requests.get(url, params=payload, timeout=timeout)
+                resp = requests.get(url, payload=payload, timeout=timeout)
             break
         except (requests.exceptions.ReadTimeout, requests.exceptions.ConnectionError):
             if cycle >= max_retries:
@@ -163,7 +163,7 @@ class Bot:
             payload['parse_mode'] = parse_mode
         resp = get_response(
             url,
-            params=payload,
+            payload=payload,
             files=files,
         )
         return resp
@@ -185,7 +185,7 @@ class Bot:
             'disable_notification': silent,
         }
         resp = get_response(
-            url, params=payload, headers={"Content-Type": "application/json"})
+            url, payload=payload, headers={"Content-Type": "application/json"})
         return resp
 
     def send_document(self,
@@ -207,7 +207,7 @@ class Bot:
         files = {'document': file}
         resp = get_response(
             url,
-            params=payload,
+            payload=payload,
             files=files,
         )
         return resp
