@@ -75,7 +75,7 @@ class Bot:
     def update(self, *, timeout=60):
         url = self.base_url + "getUpdates"
         payload = {'offset': self.offset or "", 'timeout': timeout}
-        updates = get_response(url, params=payload)
+        updates = get_response(url, payload=payload)
         # self.offset = updates[-1]['update_id'] + 1
         # if self.offset_handler: self.offset_handler(self.offset)
         return updates
@@ -92,7 +92,7 @@ class Bot:
     def get_group_member(self, participant_group, participant):
         url = self.base_url + 'getChatMember'
         payload = {'chat_id': participant_group, 'user_id': participant}
-        return get_response(url, params=payload)
+        return get_response(url, payload=payload)
 
     def send_message(self,
                      group: str or int,
@@ -128,7 +128,7 @@ class Bot:
             }
             if parse_mode:
                 payload['parse_mode'] = parse_mode
-            resp_c = get_response(url, params=payload)
+            resp_c = get_response(url, payload=payload)
             resp.append(resp_c)
         return resp
 
@@ -217,7 +217,7 @@ class Bot:
             participant_group = participant_group.telegram_id
         url = self.base_url + 'deleteMessage'
         payload = {'chat_id': participant_group, 'message_id': message_id}
-        resp = get_response(url, params=payload)
+        resp = get_response(url, payload=payload)
         return resp
 
     def __str__(self):
