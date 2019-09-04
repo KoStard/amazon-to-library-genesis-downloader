@@ -157,7 +157,7 @@ while running:
                     log_to_admpage('{} => {}'.format(from_name, text))
                     sleep(1)
                     print("Processing ", text)
-                    if text[0] == '/':
+                    if text and text[0] == '/':
                         text = text.split('@')[0]
                         print("Got command {} from {}".format(text, from_name))
                         logging.info("Got command {} from {}".format(
@@ -229,7 +229,7 @@ while running:
                     text = re.sub(r'\s{2,}', ' ', text.strip())
                     MIN_LENGTH = 10
                     MAX_LENGTH = 80
-                    if text[0] != '*' and (len(text) < MIN_LENGTH or
+                    if (not text or text[0] != '*') and (len(text) < MIN_LENGTH or
                                            len(text) > MAX_LENGTH or
                                            ' ' not in text):
                         print("Invalid query \"{}\" from {}".format(
@@ -257,7 +257,7 @@ while running:
                     print("Before algen", text)
                     MODE = "link"
                     try:
-                        if text[0] == '*':
+                        if text and text[0] == '*':
                             info = add_from_md5(
                                 text[1:],
                                 db,
